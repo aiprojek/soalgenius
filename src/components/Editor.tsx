@@ -642,7 +642,8 @@ export default function Editor({
             case 'saving':
                 return <span className="text-sm text-gray-500 italic">Menyimpan...</span>;
             case 'saved':
-                return <span className="text-sm text-green-600">Disimpan</span>;
+                return <span className="text-sm text-green-600 sm:hidden">Disimpan</span>
+                       <span className="text-sm text-green-600 hidden sm:inline">Perubahan disimpan otomatis</span>;
             case 'error':
                  return <span className="text-sm text-red-600">Gagal</span>;
             default:
@@ -787,7 +788,7 @@ export default function Editor({
                                 Selesai
                             </button>
                         </div>
-                        <div className="block sm:hidden">
+                        <div className="block">
                              <AutosaveIndicator />
                         </div>
                     </div>
@@ -802,7 +803,7 @@ export default function Editor({
                             <PrintIcon className="w-5 h-5" />
                             <span className="hidden sm:inline">Pratinjau</span>
                         </button>
-                        <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm flex-1 sm:flex-initial">Simpan Ujian</button>
+                        <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm flex-1 sm:flex-initial">Simpan</button>
                     </div>
                 </div>
             </div>

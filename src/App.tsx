@@ -658,7 +658,7 @@ function App() {
             </footer>
 
             {showIndicator && (
-                <div className={`fixed bottom-20 md:bottom-5 right-5 px-4 py-2 rounded-lg shadow-lg text-white ${showIndicator.type === 'success' ? 'bg-green-500' : 'bg-red-500'} animate-fade-in-out`}>
+                <div className={`fixed top-20 md:bottom-5 right-5 px-4 py-2 rounded-lg shadow-lg text-white ${showIndicator.type === 'success' ? 'bg-green-500' : 'bg-red-500'} animate-fade-in-out`}>
                     <div className="flex items-center gap-2">
                         <CheckCircleIcon className="w-5 h-5" />
                         <span>{showIndicator.message}</span>
@@ -679,7 +679,7 @@ function App() {
                         <p className="max-w-2xl mx-auto">
                             Aplikasi ini dirancang untuk membantu para pendidik membuat, mengelola, dan mencetak soal ujian dengan lebih mudah dan terstruktur. Setelah dimuat pertama kali, aplikasi dapat dijalankan sepenuhnya <strong>offline</strong> tanpa koneksi internet. Semua data Anda disimpan dengan aman langsung di browser.
                         </p>
-                         <div className="mt-4 text-xs text-gray-600 border-t pt-3 flex justify-center gap-4">
+                         <div className="mt-4 text-xs text-gray-600 border-t pt-3 flex flex-col sm:flex-row justify-center gap-2 sm:gap-4">
                             <span><strong>Pengembang:</strong> <a href="https://aiprojek01.my.id" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">AI Projek</a></span>
                             <span><strong>Lisensi:</strong> <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">GNU GPLv3</a></span>
                         </div>
