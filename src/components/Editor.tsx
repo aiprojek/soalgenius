@@ -642,8 +642,12 @@ export default function Editor({
             case 'saving':
                 return <span className="text-sm text-gray-500 italic">Menyimpan...</span>;
             case 'saved':
-                return <span className="text-sm text-green-600 sm:hidden">Disimpan</span>
-                       <span className="text-sm text-green-600 hidden sm:inline">Perubahan disimpan otomatis</span>;
+                return (
+                    <>
+                        <span className="text-sm text-green-600 sm:hidden">Disimpan</span>
+                        <span className="text-sm text-green-600 hidden sm:inline">Perubahan disimpan otomatis</span>
+                    </>
+                );
             case 'error':
                  return <span className="text-sm text-red-600">Gagal</span>;
             default:
