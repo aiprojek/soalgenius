@@ -333,7 +333,7 @@ export default function Editor({
     showIndicator,
 }: { 
     exam: Exam | null; 
-    onSave: (exam: Exam) => void; 
+    onSave: (exam: Exam | Omit<Exam, 'id' | 'createdAt'>) => void; 
     onCancel: () => void; 
     onPreview: (exam: Exam) => void;
     bank: BankQuestion[];
@@ -407,7 +407,7 @@ export default function Editor({
         } else {
             // Only update if the exam prop is different from the current state
             // This avoids overwriting restored data with the original prop
-            if (exam.id !== (currentExam as Exam).id) {
+            if ('id' in currentExam && exam.id !== currentExam.id) {
                 setCurrentExam(exam);
             }
         }
@@ -511,7 +511,7 @@ export default function Editor({
     };
 
     const handleSave = () => {
-        onSave(currentExam as Exam);
+        onSave(currentExam);
         localStorage.removeItem(AUTOSAVE_KEY);
     };
 
