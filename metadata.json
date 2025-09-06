@@ -1,0 +1,5 @@
+{
+  "name": "SoalGenius: Pembuat Soal Ujian",
+  "description": "Aplikasi web PWA untuk membantu pengajar membuat, mengelola, dan mencetak soal ujian secara offline dengan mudah dan profesional.",
+  "requestFramePermissions": []
+}

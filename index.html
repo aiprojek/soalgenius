@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SoalGenius: Pembuat Soal Ujian</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Aplikasi web PWA untuk membantu pengajar membuat, mengelola, dan mencetak soal ujian dengan lebih mudah dan terstruktur." />
+    <meta name="keywords" content="pembuat soal, aplikasi ujian, guru, dosen, tutor, pendidikan, ujian online, PWA offline, cetak soal, bank soal, soal otomatis, SoalGenius" />
+    <meta name="author" content="AI Projek" />
+    <link rel="canonical" href="https://soalgenius.pages.dev"/>
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://soalgenius.pages.dev/" />
+    <meta property="og:title" content="SoalGenius: Pembuat Soal Ujian" />
+    <meta property="og:description" content="Aplikasi web PWA untuk membantu pengajar membuat, mengelola, dan mencetak soal ujian dengan lebih mudah dan terstruktur." />
+    <meta property="og:image" content="thumbnail-soalgenius.jpg" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://soalgenius.pages.dev/" />
+    <meta property="twitter:title" content="SoalGenius: Pembuat Soal Ujian" />
+    <meta property="twitter:description" content="Aplikasi web PWA untuk membantu pengajar membuat, mengelola, dan mencetak soal ujian dengan lebih mudah dan terstruktur." />
+    <meta property="twitter:image" content="thumbnail-soalgenius.jpg" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon-192.svg">
+    <meta name="theme-color" content="#2563eb"/>
+<style>
+    body {
+        font-family: "Liberation Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .editor-table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1em 0;
+    }
+    .editor-table td, .editor-table th {
+        border: 1px solid #ccc;
+        padding: 8px;
+        min-width: 40px;
+    }
+    /* Style for the custom contentEditable editor */
+    .custom-editor {
+        min-height: 48px;
+        padding: 8px;
+        border: 1px solid #d1d5db; /* Tailwind gray-300 */
+        border-radius: 0.375rem; /* rounded-md */
+        transition: border-color 0.2s;
+    }
+    .custom-editor:focus {
+        outline: none;
+        border-color: #3b82f6; /* Tailwind blue-500 */
+        box-shadow: 0 0 0 1px #3b82f6; /* Ring effect */
+    }
+    /* Placeholder for contentEditable div */
+    .custom-editor:empty::before {
+        content: attr(data-placeholder);
+        color: #a0aec0; /* Tailwind gray-400 */
+        pointer-events: none;
+        font-style: normal;
+    }
+    /* Process indicator animation */
+    @keyframes fadeInOut {
+        0%, 100% { opacity: 0; transform: translateY(20px); }
+        10%, 90% { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-out {
+        animation: fadeInOut 3s ease-in-out forwards;
+    }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "vite": "https://aistudiocdn.com/vite@^7.1.4",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.2"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
