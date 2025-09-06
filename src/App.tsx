@@ -598,6 +598,9 @@ function App() {
             
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-24 md:pb-8">
                 {renderView()}
+                <footer className="text-center py-4 text-xs sm:text-sm text-gray-500 no-print">
+                    <p>&copy; {new Date().getFullYear()} Soal Genius. Dibuat dengan <HeartIcon className="w-4 h-4 inline text-red-500"/> untuk para pendidik.</p>
+                </footer>
             </main>
 
             {/* Mobile Bottom Navigation */}
@@ -611,10 +614,6 @@ function App() {
                     </button>
                 </nav>
             </div>
-
-            <footer className="text-center py-4 text-sm text-gray-500 no-print">
-                 <p>&copy; {new Date().getFullYear()} Soal Genius. Dibuat dengan <HeartIcon className="w-4 h-4 inline text-red-500"/> untuk para pendidik.</p>
-            </footer>
 
             {showIndicator && (
                 <div className={`fixed top-20 md:top-auto md:bottom-5 right-5 px-4 py-2 rounded-lg shadow-lg text-white ${showIndicator.type === 'success' ? 'bg-green-500' : 'bg-red-500'} animate-fade-in-out z-50`}>
