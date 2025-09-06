@@ -49,7 +49,7 @@ const SimpleEditor: React.FC<{
 
     return (
         <div className={`border border-gray-300 rounded-lg ${className}`}>
-            <div className="flex items-center gap-1 p-1 border-b bg-gray-50 rounded-t-lg flex-wrap">
+            <div className="flex items-center gap-1 p-1 border-b bg-gray-50 rounded-t-lg flex-nowrap overflow-x-auto">
                 <button type="button" onClick={() => execCmd('bold')} className="p-2 hover:bg-gray-200 rounded-md" title="Bold"><BoldIcon className="w-4 h-4" /></button>
                 <button type="button" onClick={() => execCmd('italic')} className="p-2 hover:bg-gray-200 rounded-md" title="Italic"><ItalicIcon className="w-4 h-4" /></button>
                 <button type="button" onClick={() => execCmd('underline')} className="p-2 hover:bg-gray-200 rounded-md" title="Underline"><UnderlineIcon className="w-4 h-4" /></button>

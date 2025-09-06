@@ -489,8 +489,6 @@ function App() {
     };
 
     const renderView = () => {
-        // FIX: The shorthand properties were referring to non-existent variables.
-        // Replaced them with the actual handler functions defined in the component's scope.
         const archiveProps = { 
             exams, 
             onEdit: handleEdit, 
@@ -499,13 +497,13 @@ function App() {
             onCreateNew: handleCreateNew,
             onDuplicate: duplicateExam,
             onGenerateVariant: generateVariant,
+            activeView: view
         };
         switch (view) {
             case 'editor':
                 return <Editor exam={currentExam} onSave={handleSaveExam} onCancel={handleCancelEditor} onPreview={handlePreview} bank={bank} addQuestionToBank={addQuestionToBank} allExamsForMeta={allExamsForMeta} showIndicator={(msg) => displayIndicator(msg, 'success')}/>;
             case 'preview':
-                // FIX: Added the required 'activeView' prop for the Archive component fallback.
-                if (!currentExam) return <Archive {...archiveProps} activeView={view} />; // Fallback
+                if (!currentExam) return <Archive {...archiveProps} />; // Fallback
                 return (
                     <div className="bg-gray-200 py-10 print:bg-white">
                         <div className="fixed top-16 left-0 right-0 bg-white shadow-md p-2 z-20 no-print flex justify-between items-center">
@@ -552,7 +550,7 @@ function App() {
                 return <Settings isOpen={true} onClose={() => setView('archive')} settings={headerSettings} onSettingsChange={setHeaderSettings} onReset={handleResetSettings}/>;
             case 'archive':
             default:
-                return <Archive {...archiveProps} activeView={view} />;
+                return <Archive {...archiveProps} />;
         }
     };
     
@@ -648,7 +646,7 @@ function App() {
                     <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 pt-4 border-t mt-6 text-sm">
                         <a href="https://lynk.id/aiprojek/s/bvBJvdA" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium"><CoffeeIcon className="w-5 h-5" /> Traktir Kopi</a>
                         <a href="https://github.com/aiprojek/soalgenius" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium"><GithubIcon className="w-5 h-5" /> Kode Sumber</a>
-                        <a href="https.t.me/aiprojek_community/32" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium"><MessageSquareIcon className="w-5 h-5" /> Beri Masukan</a>
+                        <a href="https://t.me/aiprojek_community/32" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium"><MessageSquareIcon className="w-5 h-5" /> Beri Masukan</a>
                     </div>
                 </div>
             </Modal>
