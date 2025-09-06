@@ -1,5 +1,3 @@
-
-
 const CACHE_NAME = 'soalgenius-cache-v5';
 const urlsToCache = [
   '/',

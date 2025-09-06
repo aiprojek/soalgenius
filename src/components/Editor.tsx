@@ -788,7 +788,7 @@ export default function Editor({
                                 Selesai
                             </button>
                         </div>
-                        <div className="block">
+                        <div className="block sm:hidden">
                              <AutosaveIndicator />
                         </div>
                     </div>

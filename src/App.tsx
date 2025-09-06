@@ -658,7 +658,7 @@ function App() {
             </footer>
 
             {showIndicator && (
-                <div className={`fixed top-20 md:bottom-5 right-5 px-4 py-2 rounded-lg shadow-lg text-white ${showIndicator.type === 'success' ? 'bg-green-500' : 'bg-red-500'} animate-fade-in-out`}>
+                <div className={`fixed top-20 md:top-auto md:bottom-5 right-5 px-4 py-2 rounded-lg shadow-lg text-white ${showIndicator.type === 'success' ? 'bg-green-500' : 'bg-red-500'} animate-fade-in-out`}>
                     <div className="flex items-center gap-2">
                         <CheckCircleIcon className="w-5 h-5" />
                         <span>{showIndicator.message}</span>
