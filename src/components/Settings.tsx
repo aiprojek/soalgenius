@@ -1,4 +1,3 @@
-
 import React, { useRef } from 'react';
 import type { HeaderSettings, HeaderLine } from '../types';
 import { TrashIcon, PlusIcon, UploadIcon } from './Icons';
@@ -82,7 +81,7 @@ export default function Settings({ isOpen, onClose, settings, onSettingsChange, 
 
                                 {settings.showLogo && (
                                     <div className="pl-7 space-y-2 border-l-2 ml-2">
-                                        <div className="flex items-center gap-4">
+                                        <div className="flex flex-col items-start sm:flex-row sm:items-center gap-4">
                                             {settings.logo ? (
                                                 <div className="w-16 h-16 border p-1 rounded-md bg-white flex-shrink-0">
                                                     <img src={settings.logo} alt="Logo Preview" className="w-full h-full object-contain"/>

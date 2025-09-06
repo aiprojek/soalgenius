@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Modal from './Modal';
 import { CheckCircleIcon, WandIcon, BookOpenIcon, InfoIcon } from './Icons';
@@ -63,7 +62,7 @@ export default function WelcomeModal({ isOpen, onClose, onOpenGuide }: WelcomeMo
                 </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t flex flex-col sm:flex-row justify-center items-center gap-4">
+            <div className="mt-8 pt-6 border-t flex flex-col-reverse sm:flex-row justify-center items-center gap-4">
                  <button 
                     onClick={onOpenGuide} 
                     className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gray-200 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-300 font-medium"

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import type { Exam, Question, Option, Section, SubQuestion, BankQuestion } from '../types';
 import { QuestionType } from '../types';
@@ -643,16 +642,16 @@ export default function Editor({
             case 'saving':
                 return <span className="text-sm text-gray-500 italic">Menyimpan...</span>;
             case 'saved':
-                return <span className="text-sm text-green-600">Perubahan disimpan otomatis</span>;
+                return <span className="text-sm text-green-600">Disimpan</span>;
             case 'error':
-                 return <span className="text-sm text-red-600">Gagal menyimpan</span>;
+                 return <span className="text-sm text-red-600">Gagal</span>;
             default:
                 return null;
         }
     };
 
     return (
-        <div className="max-w-4xl mx-auto pb-28">
+        <div className="max-w-4xl mx-auto pb-40 sm:pb-28">
             <h2 className="text-3xl font-bold mb-6 text-gray-900">{exam ? 'Ubah Ujian' : 'Buat Ujian Baru'}</h2>
 
             <div className="bg-white p-6 rounded-lg shadow-lg mb-6">
@@ -771,31 +770,39 @@ export default function Editor({
                 <span>Tambah Bagian Soal Baru</span>
             </button>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-10">
-                <div className="max-w-4xl mx-auto p-4 flex justify-between items-center">
-                    <div className="flex items-center gap-4">
+            <div className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-10 no-print">
+                <div className="max-w-4xl mx-auto p-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                    {/* Top row on mobile, left side on desktop */}
+                    <div className="flex items-center justify-between w-full sm:w-auto gap-4">
                         <div className="flex items-center gap-2">
                             <label className="text-sm font-medium text-gray-700 hidden sm:inline-block mr-2">Status:</label>
                             <button 
                                 onClick={() => updateExamInfo('status', 'draft')}
-                                className={`px-4 py-1 rounded-full text-sm transition-colors ${currentExam.status === 'draft' ? 'bg-yellow-100 text-yellow-800 font-semibold ring-2 ring-yellow-300' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+                                className={`px-3 py-1 rounded-full text-xs sm:text-sm transition-colors ${currentExam.status === 'draft' ? 'bg-yellow-100 text-yellow-800 font-semibold ring-1 ring-yellow-300' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
                                 Draft
                             </button>
                             <button 
                                 onClick={() => updateExamInfo('status', 'finished')}
-                                className={`px-4 py-1 rounded-full text-sm transition-colors ${currentExam.status === 'finished' ? 'bg-green-100 text-green-800 font-semibold ring-2 ring-green-300' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+                                className={`px-3 py-1 rounded-full text-xs sm:text-sm transition-colors ${currentExam.status === 'finished' ? 'bg-green-100 text-green-800 font-semibold ring-1 ring-green-300' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
                                 Selesai
                             </button>
                         </div>
-                        <AutosaveIndicator />
+                        <div className="block sm:hidden">
+                             <AutosaveIndicator />
+                        </div>
                     </div>
-                    <div className="flex gap-2 sm:gap-4">
-                        <button onClick={handleCancel} className="bg-gray-200 text-gray-900 px-4 sm:px-6 py-2 rounded-md hover:bg-gray-300">Batal</button>
-                        <button onClick={() => onPreview(currentExam as Exam)} className="bg-gray-600 text-white px-4 sm:px-6 py-2 rounded-md hover:bg-gray-700 flex items-center gap-2">
+                    
+                    {/* Bottom row on mobile, right side on desktop */}
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <div className="hidden sm:block mr-4">
+                            <AutosaveIndicator />
+                        </div>
+                        <button onClick={handleCancel} className="bg-gray-200 text-gray-900 px-4 py-2 rounded-md hover:bg-gray-300 text-sm flex-1 sm:flex-initial">Batal</button>
+                        <button onClick={() => onPreview(currentExam as Exam)} className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center justify-center gap-2 text-sm flex-1 sm:flex-initial">
                             <PrintIcon className="w-5 h-5" />
                             <span className="hidden sm:inline">Pratinjau</span>
                         </button>
-                        <button onClick={handleSave} className="bg-blue-600 text-white px-4 sm:px-6 py-2 rounded-md hover:bg-blue-700">Simpan Ujian</button>
+                        <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm flex-1 sm:flex-initial">Simpan Ujian</button>
                     </div>
                 </div>
             </div>

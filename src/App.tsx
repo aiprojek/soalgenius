@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import type { Exam, HeaderSettings, HeaderLine, Question, BankQuestion } from './types';
 import { useExams } from './hooks/useExams';
@@ -170,7 +169,7 @@ const PdfPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ exam, 
                                             )}
 
                                             {q.type === 'MULTIPLE_CHOICE' && (
-                                                <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
                                                     {q.options.map((opt) => (
                                                         <div key={opt.id} className="flex items-baseline">
                                                             <span className="flex-shrink-0">{opt.label}.</span>
@@ -332,7 +331,19 @@ function App() {
         setCurrentExam(exam);
         setView('preview');
         setIsPreviewingKey(false);
-        setZoom(1);
+        
+        // Calculate initial zoom for mobile to fit paper width
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+            const containerPadding = 24; // A bit of breathing room
+            // Paper is 210mm wide. Approx 3.78px per mm.
+            const paperWidthPx = 210 * 3.78; 
+            const screenWidth = window.innerWidth;
+            const initialZoom = (screenWidth - containerPadding) / paperWidthPx;
+            setZoom(Math.min(initialZoom, 1)); // Don't scale up past 100%
+        } else {
+            setZoom(1);
+        }
     };
 
     const handleCancelEditor = () => {
@@ -508,33 +519,44 @@ function App() {
                 if (!currentExam) return <Archive {...archiveProps} />; // Fallback
                 return (
                     <div className="bg-gray-200 py-10 print:bg-white">
-                        <div className="fixed top-16 left-0 right-0 bg-white shadow-md p-3 z-20 no-print flex justify-between items-center">
-                            <button onClick={() => setView('archive')} className="px-4 py-2 text-sm bg-gray-200 rounded-md hover:bg-gray-300">&larr; Kembali ke Arsip</button>
-                            <div className="flex items-center gap-4">
-                               <div className="flex items-center gap-2">
+                        <div className="fixed top-16 left-0 right-0 bg-white shadow-md p-2 sm:p-3 z-20 no-print flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                            {/* Left Side */}
+                            <div className="flex justify-between items-center w-full sm:w-auto">
+                                <button onClick={() => setView('archive')} className="px-4 py-2 text-sm bg-gray-200 rounded-md hover:bg-gray-300">&larr; Kembali</button>
+                                 {/* Mobile-only toggle */}
+                                 <div className="sm:hidden flex items-center gap-2">
+                                    <button onClick={() => setIsPreviewingKey(false)} className={`px-3 py-1 rounded-full text-xs ${!isPreviewingKey ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Soal</button>
+                                    <button onClick={() => setIsPreviewingKey(true)} className={`px-3 py-1 rounded-full text-xs ${isPreviewingKey ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Kunci</button>
+                                </div>
+                            </div>
+                            {/* Right Side */}
+                            <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 w-full sm:w-auto">
+                                <div className="hidden sm:flex items-center gap-2">
                                    <button onClick={() => setIsPreviewingKey(false)} className={`px-3 py-1 rounded-full text-sm ${!isPreviewingKey ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Lembar Soal</button>
                                    <button onClick={() => setIsPreviewingKey(true)} className={`px-3 py-1 rounded-full text-sm ${isPreviewingKey ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Kunci Jawaban</button>
-                               </div>
-                               <div className="w-px h-6 bg-gray-300"></div>
-                               <div className="flex items-center gap-2">
-                                    <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="p-2 hover:bg-gray-100 rounded-full" title="Perkecil"><ZoomOutIcon className="w-5 h-5"/></button>
-                                    <span className="w-12 text-center text-sm font-semibold">{(zoom * 100).toFixed(0)}%</span>
-                                    <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="p-2 hover:bg-gray-100 rounded-full" title="Perbesar"><ZoomInIcon className="w-5 h-5"/></button>
                                 </div>
-                                 <div className="w-px h-6 bg-gray-300"></div>
-                                <button onClick={handleExportHtml} className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700" title="Ekspor sebagai file HTML mandiri">
-                                    <FileCodeIcon className="w-5 h-5"/> Ekspor HTML
-                                </button>
-                                <button onClick={handlePrint} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-                                    <PrintIcon className="w-5 h-5"/> Cetak
-                                </button>
+                                <div className="w-px h-6 bg-gray-300 hidden sm:block"></div>
+                                <div className="flex items-center gap-1 sm:gap-2">
+                                     <button onClick={() => setZoom(z => Math.max(0.2, z - 0.1))} className="p-2 hover:bg-gray-100 rounded-full" title="Perkecil"><ZoomOutIcon className="w-5 h-5"/></button>
+                                     <span className="w-12 text-center text-sm font-semibold">{(zoom * 100).toFixed(0)}%</span>
+                                     <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="p-2 hover:bg-gray-100 rounded-full" title="Perbesar"><ZoomInIcon className="w-5 h-5"/></button>
+                                </div>
+                                 <div className="w-px h-6 bg-gray-300 hidden sm:block"></div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={handleExportHtml} className="flex items-center justify-center gap-2 bg-teal-600 text-white px-3 py-2 rounded-md hover:bg-teal-700 flex-1 sm:flex-initial" title="Ekspor sebagai file HTML mandiri">
+                                        <FileCodeIcon className="w-5 h-5"/> <span className="hidden sm:inline">Ekspor</span>
+                                    </button>
+                                    <button onClick={handlePrint} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 flex-1 sm:flex-initial">
+                                        <PrintIcon className="w-5 h-5"/> <span className="hidden sm:inline">Cetak</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
                         <div id="pdf-preview-container" className="overflow-x-auto pb-8">
                             <div 
                                 id="pdf-preview-content" 
-                                className="flex flex-col items-center gap-8 pt-20 print:pt-0 mx-auto"
+                                className="flex flex-col items-center gap-8 pt-32 sm:pt-20 print:pt-0 mx-auto"
                                 style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}
                             >
                                 {isPreviewingKey ? 
@@ -606,16 +628,37 @@ function App() {
                 </nav>
             </header>
             
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-24 md:pb-8">
                 {renderView()}
             </main>
+
+            {/* Mobile Bottom Navigation */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-30 no-print border-t">
+                <nav className="flex justify-around items-center h-16">
+                    <button 
+                        onClick={() => setView('archive')} 
+                        className={`flex flex-col items-center justify-center gap-1 px-3 py-2 text-xs font-medium rounded-md w-28 ${(view === 'archive' || view === 'editor' || view === 'preview') ? 'text-blue-700' : 'text-gray-600'}`}
+                    >
+                        <EditorIcon className="w-6 h-6" />
+                        <span>Editor Ujian</span>
+                    </button>
+                    <button 
+                        onClick={() => setView('bank')} 
+                        className={`flex flex-col items-center justify-center gap-1 px-3 py-2 text-xs font-medium rounded-md w-28 ${view === 'bank' ? 'text-blue-700' : 'text-gray-600'}`}
+                    >
+                        <BankIcon className="w-6 h-6" />
+                        <span>Bank Soal</span>
+                    </button>
+                </nav>
+            </div>
+
 
             <footer className="text-center py-4 text-sm text-gray-500 no-print">
                  <p>&copy; {new Date().getFullYear()} Soal Genius. Dibuat dengan <HeartIcon className="w-4 h-4 inline text-red-500"/> untuk para pendidik.</p>
             </footer>
 
             {showIndicator && (
-                <div className={`fixed bottom-5 right-5 px-4 py-2 rounded-lg shadow-lg text-white ${showIndicator.type === 'success' ? 'bg-green-500' : 'bg-red-500'} animate-fade-in-out`}>
+                <div className={`fixed bottom-20 md:bottom-5 right-5 px-4 py-2 rounded-lg shadow-lg text-white ${showIndicator.type === 'success' ? 'bg-green-500' : 'bg-red-500'} animate-fade-in-out`}>
                     <div className="flex items-center gap-2">
                         <CheckCircleIcon className="w-5 h-5" />
                         <span>{showIndicator.message}</span>
@@ -687,7 +730,7 @@ function App() {
                         </GuideSection>
                     </div>
 
-                    <div className="flex justify-center items-center gap-6 pt-4 border-t mt-6 text-sm">
+                    <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 pt-4 border-t mt-6 text-sm">
                         <a href="https://lynk.id/aiprojek/s/bvBJvdA" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium">
                             <CoffeeIcon className="w-5 h-5" /> Traktir Kopi
                         </a>
