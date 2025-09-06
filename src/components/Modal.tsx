@@ -21,7 +21,13 @@ export default function Modal({ isOpen, onClose, title, children, size = 'lg' }:
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-end sm:items-center sm:p-4" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-end sm:items-center sm:p-4" 
+      onClick={onClose} 
+      role="dialog" 
+      aria-modal="true" 
+      aria-labelledby="modal-title"
+    >
       <div 
         className={`bg-white shadow-xl w-full ${sizeClasses[size]} flex flex-col max-h-full rounded-t-lg sm:rounded-lg sm:max-h-[90vh]`} 
         onClick={(e) => e.stopPropagation()}
