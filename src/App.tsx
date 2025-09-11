@@ -5,11 +5,12 @@ import { useQuestionBank } from './hooks/useQuestionBank';
 import Archive from './components/Archive';
 import Editor from './components/Editor';
 import Modal from './components/Modal';
-import WelcomeModal from './components/WelcomeModal'; // Import WelcomeModal
+import WelcomeModal from './components/WelcomeModal';
 import QuestionBank from './components/QuestionBank';
 import Settings from './components/Settings';
+import Sidebar from './components/Sidebar'; // Import Sidebar
 import { QuestionType } from './types';
-import { SettingsIcon, DownloadIcon, UploadIcon, LogoIcon, PlusIcon, TrashIcon, ZoomInIcon, ZoomOutIcon, FileCodeIcon, PrintIcon, ArchiveIcon, InfoIcon, HeartIcon, MessageSquareIcon, GithubIcon, BookmarkIcon, CheckCircleIcon, WandIcon, CoffeeIcon, DragHandleIcon, EditorIcon, BankIcon, MenuIcon } from './components/Icons';
+import { SettingsIcon, DownloadIcon, UploadIcon, LogoIcon, PlusIcon, TrashIcon, ZoomInIcon, ZoomOutIcon, FileCodeIcon, PrintIcon, ArchiveIcon, InfoIcon, HeartIcon, MessageSquareIcon, GithubIcon, BookmarkIcon, CheckCircleIcon, WandIcon, CoffeeIcon, DragHandleIcon, EditorIcon, BankIcon, HamburgerIcon } from './components/Icons';
 
 const RawHtmlRenderer: React.FC<{ html: string; className?: string }> = ({ html, className }) => (
     <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
@@ -297,8 +298,7 @@ function App() {
     const [isWelcomeModalOpen, setWelcomeModalOpen] = useState(false);
     const [zoom, setZoom] = useState(1);
     const [previewSource, setPreviewSource] = useState<View>('archive');
-    const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const mobileMenuRef = useRef<HTMLDivElement>(null);
+    const [isSidebarOpen, setSidebarOpen] = useState(false);
 
     const defaultHeaderSettings: HeaderSettings = {
         showHeader: true,
@@ -335,16 +335,6 @@ function App() {
         if (!hasBeenWelcomed) {
             setWelcomeModalOpen(true);
         }
-    }, []);
-    
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
-                setMobileMenuOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     const { 
@@ -474,7 +464,6 @@ function App() {
             return;
         }
     
-        // Capture all styles from the document's head, including Tailwind's.
         const allStyles = Array.from(document.querySelectorAll('style'))
             .map(style => style.innerHTML)
             .join('\n');
@@ -495,21 +484,14 @@ function App() {
                 <title>${title}</title>
                 <style>
                     ${allStyles}
-
-                    /* Add specific styles for the exported body and printing */
                     body {
                         font-family: "Liberation Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                        background-color: #e5e7eb; /* Tailwind gray-200 */
-                        padding: 2.5rem 0; /* Tailwind py-10 */
+                        background-color: #e5e7eb;
+                        padding: 2.5rem 0;
                     }
                     @media print {
-                        body {
-                            background-color: white;
-                            padding: 0;
-                        }
-                        .shadow-lg {
-                            box-shadow: none !important;
-                        }
+                        body { background-color: white; padding: 0; }
+                        .shadow-lg { box-shadow: none !important; }
                     }
                 </style>
             </head>
@@ -644,8 +626,8 @@ function App() {
 
     const mainContentPadding = useMemo(() => {
         let padding = 'py-4 sm:py-8';
-        if (view === 'editor' || view === 'archive' || view === 'bank') {
-            padding += ' pb-24 md:pb-8';
+        if (view === 'archive') {
+             padding += ' pb-24 md:pb-8'; // Padding for FAB on mobile
         }
         return padding;
     }, [view]);
@@ -654,9 +636,14 @@ function App() {
         <div className="bg-gray-100 min-h-screen font-sans">
             <header className="bg-white shadow-sm sticky top-0 z-30 no-print">
                 <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('archive')}>
-                        <LogoIcon className="w-8 h-8" />
-                        <h1 className="text-xl font-bold text-gray-800">SoalGenius</h1>
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 -ml-2 text-gray-600">
+                           <HamburgerIcon className="w-6 h-6" />
+                        </button>
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('archive')}>
+                            <LogoIcon className="w-8 h-8" />
+                            <h1 className="text-xl font-bold text-gray-800 hidden sm:block">SoalGenius</h1>
+                        </div>
                     </div>
                      <div className="hidden md:flex items-center gap-4 ml-8">
                         <button onClick={() => setView('archive')} className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md ${(view === 'archive' || view === 'editor' || view === 'preview') ? 'text-blue-700 bg-blue-100' : 'text-gray-600 hover:bg-gray-100'}`}>
@@ -675,44 +662,60 @@ function App() {
                          <button onClick={() => setView('settings')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Pengaturan"><SettingsIcon className="w-5 h-5"/></button>
                          <button onClick={() => setInfoModalOpen(true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Tentang Aplikasi"><InfoIcon className="w-5 h-5"/></button>
                     </div>
-                     <div className="md:hidden relative" ref={mobileMenuRef}>
-                         <button onClick={() => setMobileMenuOpen(p => !p)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" aria-label="Buka menu">
-                            <MenuIcon className="w-6 h-6" />
-                         </button>
-                         {isMobileMenuOpen && (
-                             <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg z-20 border py-1">
-                                 <button onClick={() => {setView('settings'); setMobileMenuOpen(false);}} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><SettingsIcon className="w-5 h-5"/> Pengaturan</button>
-                                 <button onClick={() => {backupData(); setMobileMenuOpen(false);}} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><DownloadIcon className="w-5 h-5"/> Cadangkan Data</button>
-                                 <button onClick={() => {handleTriggerUpload(); setMobileMenuOpen(false);}} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><UploadIcon className="w-5 h-5"/> Pulihkan Data</button>
-                                 <div className="my-1 h-px bg-gray-200"></div>
-                                 <button onClick={() => {setInfoModalOpen(true); setMobileMenuOpen(false);}} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><InfoIcon className="w-5 h-5"/> Tentang & Panduan</button>
-                             </div>
-                         )}
-                    </div>
                 </nav>
             </header>
             
+            <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)}>
+                <nav className="flex flex-col gap-2">
+                    <button onClick={() => {setView('archive'); setSidebarOpen(false);}} className={`flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium ${(view === 'archive' || view === 'editor' || view === 'preview') ? 'text-blue-700 bg-blue-100' : 'text-gray-700 hover:bg-gray-100'}`}>
+                        <EditorIcon className="w-5 h-5" />
+                        Editor Ujian
+                    </button>
+                    <button onClick={() => {setView('bank'); setSidebarOpen(false);}} className={`flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium ${view === 'bank' ? 'text-blue-700 bg-blue-100' : 'text-gray-700 hover:bg-gray-100'}`}>
+                        <BankIcon className="w-5 h-5" />
+                        Bank Soal
+                    </button>
+                </nav>
+                <div className="my-4 h-px bg-gray-200"></div>
+                 <nav className="flex flex-col gap-2">
+                     <button onClick={() => {setView('settings'); setSidebarOpen(false);}} className="flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100">
+                        <SettingsIcon className="w-5 h-5"/> Pengaturan
+                     </button>
+                      <button onClick={() => {backupData(); setSidebarOpen(false);}} className="flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100">
+                        <DownloadIcon className="w-5 h-5"/> Cadangkan Data
+                      </button>
+                     <button onClick={() => {handleTriggerUpload(); setSidebarOpen(false);}} className="flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100">
+                        <UploadIcon className="w-5 h-5"/> Pulihkan Data
+                     </button>
+                </nav>
+                 <div className="my-4 h-px bg-gray-200"></div>
+                 <nav>
+                    <button onClick={() => {setInfoModalOpen(true); setSidebarOpen(false);}} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100">
+                        <InfoIcon className="w-5 h-5"/> Tentang & Panduan
+                     </button>
+                 </nav>
+            </Sidebar>
+
             <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${mainContentPadding}`}>
                 {renderView()}
             </main>
             
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_5px_rgba(0,0,0,0.1)] h-16 flex justify-around items-center z-10 no-print">
-                <button onClick={() => setView('archive')} className={`flex flex-col items-center gap-1 text-xs px-2 py-1 rounded-md ${(view === 'archive' || view === 'editor' || view === 'preview') ? 'text-blue-700' : 'text-gray-600'}`}>
-                    <EditorIcon className="w-6 h-6" />
-                    <span>Editor Ujian</span>
+            {view === 'archive' && (
+                <button 
+                    onClick={handleCreateNew} 
+                    className="md:hidden fixed bottom-8 right-6 bg-blue-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors z-20"
+                    aria-label="Buat Ujian Baru"
+                >
+                    <PlusIcon className="w-7 h-7" />
                 </button>
-                <button onClick={() => setView('bank')} className={`flex flex-col items-center gap-1 text-xs px-2 py-1 rounded-md ${view === 'bank' ? 'text-blue-700' : 'text-gray-600'}`}>
-                    <BankIcon className="w-6 h-6" />
-                    <span>Bank Soal</span>
-                </button>
-            </nav>
+            )}
 
             <footer className="text-center py-4 text-sm text-gray-500 no-print">
                  <p>&copy; {new Date().getFullYear()} Soal Genius. Dibuat dengan <HeartIcon className="w-4 h-4 inline text-red-500"/> untuk para pendidik.</p>
             </footer>
 
             {showIndicator && (
-                <div className={`fixed bottom-5 right-5 px-4 py-2 rounded-lg shadow-lg text-white ${showIndicator.type === 'success' ? 'bg-green-500' : 'bg-red-500'} animate-fade-in-out`}>
+                <div className={`fixed bottom-5 right-5 px-4 py-2 rounded-lg shadow-lg text-white ${showIndicator.type === 'success' ? 'bg-green-500' : 'bg-red-500'} animate-fade-in-out z-50`}>
                     <div className="flex items-center gap-2">
                         <CheckCircleIcon className="w-5 h-5" />
                         <span>{showIndicator.message}</span>
@@ -742,7 +745,7 @@ function App() {
                     <div className="space-y-4">
                         <GuideSection title="1. Memulai Ujian Baru" icon={<PlusIcon className="w-5 h-5 text-blue-600" />}>
                             <ul className="list-disc list-outside space-y-1">
-                                <li>Dari halaman utama (Arsip), klik tombol <strong>"Buat Ujian Baru"</strong>.</li>
+                                <li>Dari halaman utama (Arsip), klik tombol <strong>"Buat Ujian Baru"</strong> di pojok kanan atas (desktop) atau tombol <strong>+</strong> di pojok kanan bawah (seluler).</li>
                                 <li>Isi informasi dasar ujian seperti <strong>Judul, Mata Pelajaran, Kelas,</strong> dan <strong>Waktu</strong> pengerjaan.</li>
                                 <li>Anda bisa menambahkan <strong>deskripsi</strong> internal (tidak akan dicetak) sebagai catatan.</li>
                             </ul>
