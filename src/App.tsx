@@ -645,7 +645,7 @@ function App() {
     }, [view]);
 
     return (
-        <div className="bg-gray-100 min-h-screen font-sans">
+        <div className="bg-gray-100 min-h-screen font-sans flex flex-col">
             <header className="bg-white shadow-sm sticky top-0 z-30 no-print">
                 <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
                     {/* Left Side */}
@@ -717,7 +717,7 @@ function App() {
                  </nav>
             </Sidebar>
 
-            <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${mainContentPadding}`}>
+            <main className={`flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${mainContentPadding}`}>
                 {renderView()}
             </main>
             
@@ -731,8 +731,16 @@ function App() {
                 </button>
             )}
 
-            <footer className="text-center py-4 text-sm text-gray-500 no-print">
-                 <p>&copy; {new Date().getFullYear()} Soal Genius. Dibuat dengan <HeartIcon className="w-4 h-4 inline text-red-500"/> untuk para pendidik.</p>
+            <footer className="border-t border-gray-200 text-sm text-gray-600 no-print mt-auto">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-wrap justify-center sm:justify-between items-center gap-y-2 gap-x-6">
+                    <p className="text-center sm:text-left">
+                        &copy; {new Date().getFullYear()} SoalGenius. Dibuat oleh 
+                        <a href="https://aiprojek01.my.id" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">AI Projek</a>.
+                    </p>
+                    <p className="flex items-center gap-1.5 text-center sm:text-right">
+                        Dengan <HeartIcon className="w-4 h-4 inline text-red-500"/> untuk para pendidik.
+                    </p>
+                </div>
             </footer>
 
             {showIndicator && (

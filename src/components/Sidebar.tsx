@@ -38,7 +38,7 @@ export default function Sidebar({ isOpen, onClose, children }: SidebarProps) {
                         <LogoIcon className="w-7 h-7" />
                         <span className="font-bold text-lg text-gray-800">SoalGenius</span>
                     </div>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-2xl" aria-label="Tutup sidebar">&times;</button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
                     {children}
