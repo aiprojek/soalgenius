@@ -197,7 +197,7 @@ const PdfPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ exam, 
                                                     <p className="font-semibold">Jawab:</p>
                                                     <div className="space-y-4">
                                                         <div className="border-b border-dotted border-black" style={{ height: '1.5em' }}></div>
-                                                        <div className="border-b border-dotted border-black" style={{ height: '1.em' }}></div>
+                                                        <div className="border-b border-dotted border-black" style={{ height: '1.5em' }}></div>
                                                         <div className="border-b border-dotted border-black" style={{ height: '1.5em' }}></div>
                                                     </div>
                                                 </div>
@@ -298,7 +298,7 @@ function App() {
     const defaultHeaderSettings: HeaderSettings = {
         showHeader: true,
         showLogo: true,
-        logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGESURBVHhe7dixTsNQEATgd98SAvw/w0sDVAQSNeFjQsU6My3Zdfep9e+NnWmvvfa2U255/1dO5wSAQkAAKCAACAgABAACCgEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIDcde+1t1/tA2dIeT5gdiueAAAAAElFTkSuQmCC', // Default placeholder
+        logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGESURBVHhe7dixTsNQEATgd98SAvw/w0sDVAQSNeFjQsU6My3Zdfep9e+NnWmvvfa2U255/1dO5wSAQkAAKCAACAgABAACCgEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIDcde+1t1/tA2dIeT5gdiueAAAAAElFTkSuQmCC', // Default placeholder
         headerLines: [
             { id: '1', text: 'PEMERINTAH KOTA CONTOH' },
             { id: '2', text: 'DINAS PENDIDIKAN DAN KEBUDAYAAN' },
@@ -525,7 +525,7 @@ function App() {
     };
 
     const renderView = () => {
-        const archiveProps = { exams, onEdit: handleEdit, onDelete: deleteExam, onPreview: (exam: Exam) => handlePreview(exam, 'archive'), onCreateNew: handleCreateNew, onDuplicate: duplicateExam, onGenerateVariant: generateVariant, activeView: view };
+        const archiveProps = { exams, onEdit: handleEdit, onDelete: deleteExam, onPreview: (exam: Exam) => handlePreview(exam, 'archive'), onCreateNew: handleCreateNew, onDuplicate: duplicateExam, onGenerateVariant: generateVariant };
         switch (view) {
             case 'editor':
                 return <Editor exam={currentExam} onSave={handleSaveExam} onCancel={handleCancelEditor} onPreview={(exam) => handlePreview(exam as Exam, 'editor')} bank={bank} addQuestionToBank={addQuestionToBank} allExamsForMeta={allExamsForMeta} showIndicator={(msg) => displayIndicator(msg, 'success')}/>;
@@ -649,6 +649,18 @@ function App() {
                     </button>
                 </nav>
             </div>
+
+            {/* Floating Action Button */}
+            {view === 'archive' && (
+                 <button 
+                    onClick={handleCreateNew} 
+                    className="fixed bottom-20 md:bottom-8 right-4 md:right-8 bg-blue-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-105 z-30"
+                    title="Buat Ujian Baru"
+                    aria-label="Buat Ujian Baru"
+                >
+                    <PlusIcon className="w-8 h-8" />
+                </button>
+            )}
 
             {showIndicator && (
                 <div className={`fixed top-20 md:top-auto md:bottom-5 right-5 px-4 py-2 rounded-lg shadow-lg text-white ${showIndicator.type === 'success' ? 'bg-green-500' : 'bg-red-500'} animate-fade-in-out z-50`}>
