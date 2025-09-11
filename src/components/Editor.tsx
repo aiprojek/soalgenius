@@ -31,7 +31,6 @@ const SimpleEditor: React.FC<{
 }> = ({ value, onChange, placeholder, className = '' }) => {
     const editorRef = useRef<HTMLDivElement>(null);
 
-    // Sync state with contentEditable div
     useEffect(() => {
         if (editorRef.current && value !== editorRef.current.innerHTML) {
             editorRef.current.innerHTML = value;
@@ -179,7 +178,6 @@ const QuestionItem: React.FC<{
         setTimeout(() => setJustSaved(false), 2000);
     };
 
-    // --- Matching Question Handlers ---
     const handleMatchingItemChange = (type: 'premises' | 'responses', id: string, text: string) => {
         const key = type === 'premises' ? 'matchingPremises' : 'matchingResponses';
         const items = (question[key] || []).map(item => item.id === id ? { ...item, text } : item);
@@ -201,10 +199,10 @@ const QuestionItem: React.FC<{
     const handleMatchingAnswerChange = (premiseId: string, responseId: string) => {
         let newAnswers = [...(question.answerKeyMatching || [])];
         const existingIndex = newAnswers.findIndex(ans => ans.premiseId === premiseId);
-        if (responseId) { // Add or update answer
+        if (responseId) {
             if (existingIndex > -1) newAnswers[existingIndex] = { premiseId, responseId };
             else newAnswers.push({ premiseId, responseId });
-        } else { // Remove answer if dropdown is cleared
+        } else {
             if (existingIndex > -1) newAnswers.splice(existingIndex, 1);
         }
         updateQuestion({ ...question, answerKeyMatching: newAnswers });
@@ -288,7 +286,7 @@ const QuestionItem: React.FC<{
                                 aria-label={`Label Opsi ${optIndex + 1}`}
                             />
                             <span className="font-semibold">.</span>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                                 <SimpleEditor
                                     value={opt.text}
                                     onChange={(html) => handleOptionChange(opt.id, 'text', html)}
@@ -324,7 +322,7 @@ const QuestionItem: React.FC<{
                                 aria-label={`Label Opsi ${optIndex + 1}`}
                             />
                             <span className="font-semibold">.</span>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                                 <SimpleEditor
                                     value={opt.text}
                                     onChange={(html) => handleOptionChange(opt.id, 'text', html)}
@@ -359,13 +357,12 @@ const QuestionItem: React.FC<{
             {question.type === QuestionType.MATCHING && (
                 <div className="mt-4 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Kolom A (Premises) */}
                         <div className="space-y-2">
                             <h5 className="font-semibold text-sm text-gray-800">Kolom A (Pernyataan)</h5>
                             {question.matchingPremises?.map((premise, index) => (
                                 <div key={premise.id} className="flex items-center gap-2">
                                     <span className="font-semibold">{index + 1}.</span>
-                                    <div className="flex-1">
+                                    <div className="flex-1 min-w-0">
                                         <SimpleEditor value={premise.text} onChange={html => handleMatchingItemChange('premises', premise.id, html)} placeholder="Tulis pernyataan..."/>
                                     </div>
                                     <button onClick={() => removeMatchingItem('premises', premise.id)} className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><TrashIcon className="w-4 h-4"/></button>
@@ -373,13 +370,12 @@ const QuestionItem: React.FC<{
                             ))}
                             <button onClick={() => addMatchingItem('premises')} className="text-sm text-blue-600 hover:underline">+ Tambah Pernyataan</button>
                         </div>
-                        {/* Kolom B (Responses) */}
                         <div className="space-y-2">
                              <h5 className="font-semibold text-sm text-gray-800">Kolom B (Jawaban)</h5>
                              {question.matchingResponses?.map((response, index) => (
                                 <div key={response.id} className="flex items-center gap-2">
                                     <span className="font-semibold">{String.fromCharCode(65 + index)}.</span>
-                                    <div className="flex-1">
+                                    <div className="flex-1 min-w-0">
                                         <SimpleEditor value={response.text} onChange={html => handleMatchingItemChange('responses', response.id, html)} placeholder="Tulis jawaban..."/>
                                     </div>
                                     <button onClick={() => removeMatchingItem('responses', response.id)} className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><TrashIcon className="w-4 h-4"/></button>
@@ -388,7 +384,6 @@ const QuestionItem: React.FC<{
                             <button onClick={() => addMatchingItem('responses')} className="text-sm text-blue-600 hover:underline">+ Tambah Jawaban</button>
                         </div>
                     </div>
-                     {/* Kunci Jawaban */}
                     <div className="pt-4 border-t">
                         <h5 className="font-semibold text-sm text-gray-800 mb-2">Kunci Jawaban (Menjodohkan):</h5>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -441,7 +436,7 @@ const QuestionItem: React.FC<{
                                     aria-label="Nomor Sub Soal"
                                 />
                                 <span className="pt-2">.</span>
-                                <div className='flex-1'>
+                                <div className='flex-1 min-w-0'>
                                     <SimpleEditor
                                         value={sub.text}
                                         onChange={(html) => handleUpdateSubQuestion(sub.id, 'text', html)}
@@ -505,12 +500,8 @@ export default function Editor({
     const [isBankModalOpen, setBankModalOpen] = useState(false);
     const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
     const [isInfoCollapsed, setInfoCollapsed] = useState(false);
-
     const [draggedItem, setDraggedItem] = useState<{type: 'section' | 'question', sectionId: string, questionId?: string} | null>(null);
-    const [dropTarget, setDropTarget] = useState<{type: 'section' | 'question', sectionId: string, questionId?: string} | null>(null);
 
-
-    // On component mount, check for autosaved data
     useEffect(() => {
         try {
             const autosavedData = localStorage.getItem(AUTOSAVE_KEY);
@@ -533,7 +524,6 @@ export default function Editor({
         return () => clearTimeout(mountTimer);
     }, []);
 
-    // Autosave logic on currentExam changes (debounced)
     useEffect(() => {
         if (!isMounted.current) return;
 
@@ -585,20 +575,16 @@ export default function Editor({
     const updateSection = (id: string, field: keyof Section, value: string | Question[]) => {
         setCurrentExam(prev => ({
             ...prev,
-            sections: prev.sections.map(s => s.id === id ? { ...s, [field]: value } : s)
+            sections: prev.sections.map(s => s.id === id ? { ...s, [field]: value as any } : s)
         }));
     };
 
     const removeSection = (id: string) => {
-        if (!window.confirm('Yakin ingin menghapus bagian ini beserta semua soal di dalamnya?')) {
-            return;
-        }
-        
+        if (!window.confirm('Yakin ingin menghapus bagian ini beserta semua soal di dalamnya?')) return;
         if (currentExam.sections.length <= 1) {
             alert("Tidak bisa menghapus satu-satunya bagian soal.");
             return;
         }
-
         setCurrentExam(prev => ({
             ...prev,
             sections: prev.sections.filter(s => s.id !== id),
@@ -611,27 +597,16 @@ export default function Editor({
             sections: prev.sections.map(s => {
                 if (s.id === sectionId) {
                     const newQuestion: Question = {
-                        id: crypto.randomUUID(),
-                        type,
-                        questionNumber: (s.questions.length + 1).toString(),
-                        questionText: '',
-                        image: null,
+                        id: crypto.randomUUID(), type, questionNumber: (s.questions.length + 1).toString(), questionText: '', image: null,
                         options: type === QuestionType.MULTIPLE_CHOICE || type === QuestionType.MULTIPLE_CHOICE_COMPLEX ? Array.from({ length: 4 }, (v, i) => ({ id: crypto.randomUUID(), text: '', label: String.fromCharCode(97 + i) })) : [],
-                        correctAnswerIds: [],
-                        includeAnswerSpace: false,
-                        subQuestions: [],
-                        answerKey: '',
-                        trueFalseAnswer: type === QuestionType.TRUE_FALSE ? 'true' : null,
+                        correctAnswerIds: [], includeAnswerSpace: false, subQuestions: [], answerKey: '', trueFalseAnswer: type === QuestionType.TRUE_FALSE ? 'true' : null,
                         matchingPremises: type === QuestionType.MATCHING ? Array.from({ length: 3 }, () => ({ id: crypto.randomUUID(), text: '' })) : [],
                         matchingResponses: type === QuestionType.MATCHING ? Array.from({ length: 3 }, () => ({ id: crypto.randomUUID(), text: '' })) : [],
                         answerKeyMatching: [],
                     };
-
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = s.instruction;
-                    const textContent = tempDiv.textContent || '';
-                    const isInstructionEmpty = !s.instruction || textContent.trim() === '';
-                    
+                    const isInstructionEmpty = !s.instruction || (tempDiv.textContent || '').trim() === '';
                     const instruction = isInstructionEmpty ? instructionDefaults[type] : s.instruction;
                     return { ...s, instruction, questions: [...s.questions, newQuestion] };
                 }
@@ -653,10 +628,7 @@ export default function Editor({
             sections: prev.sections.map(section => {
                 if (section.id === sectionId) {
                     const updatedQuestions = section.questions.filter(q => q.id !== questionId);
-                    // Re-number questions
-                    updatedQuestions.forEach((q, index) => {
-                        q.questionNumber = (index + 1).toString();
-                    });
+                    updatedQuestions.forEach((q, index) => { q.questionNumber = (index + 1).toString(); });
                     return { ...section, questions: updatedQuestions };
                 }
                 return section;
@@ -670,20 +642,16 @@ export default function Editor({
     };
 
     const handleCancel = () => {
-        const autosavedData = localStorage.getItem(AUTOSAVE_KEY);
-        if (autosavedData) {
-            if (window.confirm('Anda memiliki perubahan yang belum disimpan. Apakah Anda yakin ingin membatalkan dan menghapusnya?')) {
-                localStorage.removeItem(AUTOSAVE_KEY);
-                onCancel();
-            }
-        } else {
+        if (localStorage.getItem(AUTOSAVE_KEY) && window.confirm('Anda memiliki perubahan yang belum disimpan. Yakin ingin membatalkan?')) {
+            localStorage.removeItem(AUTOSAVE_KEY);
+            onCancel();
+        } else if (!localStorage.getItem(AUTOSAVE_KEY)) {
             onCancel();
         }
     };
     
     const handleSaveQuestionToBank = (question: Question) => {
-        const success = addQuestionToBank(question, currentExam.subject, currentExam.grade, []);
-        if (success) {
+        if (addQuestionToBank(question, currentExam.subject, currentExam.grade, [])) {
             showIndicator('Soal berhasil disimpan ke bank!');
         }
     };
@@ -695,18 +663,14 @@ export default function Editor({
 
     const handleAddQuestionsFromBank = (questionsToAdd: Question[]) => {
         if (!activeSectionId) return;
-
         setCurrentExam(prev => ({
             ...prev,
             sections: prev.sections.map(s => {
                 if (s.id === activeSectionId) {
-                    const existingQuestions = s.questions;
                     const newQuestions = questionsToAdd.map((q, index) => ({
-                        ...q,
-                        id: crypto.randomUUID(), // Ensure new unique ID in the exam
-                        questionNumber: (existingQuestions.length + index + 1).toString(),
+                        ...q, id: crypto.randomUUID(), questionNumber: (s.questions.length + index + 1).toString(),
                     }));
-                    return { ...s, questions: [...existingQuestions, ...newQuestions] };
+                    return { ...s, questions: [...s.questions, ...newQuestions] };
                 }
                 return s;
             })
@@ -719,96 +683,65 @@ export default function Editor({
         setDraggedItem({ type, sectionId, questionId });
     };
 
-    const handleDragEnd = () => {
-        setDraggedItem(null);
-        setDropTarget(null);
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-    };
-
-    const handleDrop = (e: React.DragEvent, targetType: 'section' | 'question', targetSectionId: string, targetQuestionId?: string) => {
+    const handleDrop = (e: React.DragEvent, targetSectionId: string, targetQuestionId?: string) => {
         e.preventDefault();
         if (!draggedItem) return;
 
-        if (draggedItem.type === 'section' && targetType === 'section') {
-            const sourceId = draggedItem.sectionId;
-            const targetId = targetSectionId;
-            if (sourceId === targetId) return;
-            const sourceIndex = currentExam.sections.findIndex(s => s.id === sourceId);
-            const targetIndex = currentExam.sections.findIndex(s => s.id === targetId);
+        const newSections = JSON.parse(JSON.stringify(currentExam.sections));
+        
+        if (draggedItem.type === 'section') {
+            const sourceIndex = newSections.findIndex((s: Section) => s.id === draggedItem.sectionId);
+            const targetIndex = newSections.findIndex((s: Section) => s.id === targetSectionId);
             if (sourceIndex === -1 || targetIndex === -1) return;
-            const newSections = [...currentExam.sections];
             const [removed] = newSections.splice(sourceIndex, 1);
             newSections.splice(targetIndex, 0, removed);
-            setCurrentExam(prev => ({ ...prev, sections: newSections.map((s, i) => ({ ...s, title: toRoman(i + 1) })) }));
+        } else if (draggedItem.type === 'question') {
+            const sourceSection = newSections.find((s: Section) => s.id === draggedItem.sectionId);
+            const targetSection = newSections.find((s: Section) => s.id === targetSectionId);
+            if (!sourceSection || !targetSection) return;
+
+            const questionIndex = sourceSection.questions.findIndex((q: Question) => q.id === draggedItem.questionId);
+            if (questionIndex === -1) return;
+
+            const [question] = sourceSection.questions.splice(questionIndex, 1);
+            
+            const targetIndex = targetQuestionId ? targetSection.questions.findIndex((q: Question) => q.id === targetQuestionId) : targetSection.questions.length;
+            targetSection.questions.splice(targetIndex, 0, question);
         }
 
-        if (draggedItem.type === 'question') {
-             const sourceQId = draggedItem.questionId!;
-             const sourceSId = draggedItem.sectionId;
-             const targetSId = targetSectionId;
-             const targetQId = targetQuestionId;
-             
-             let sourceQuestion: Question | undefined;
-             const newSections = JSON.parse(JSON.stringify(currentExam.sections));
-             const sourceSection = newSections.find((s:Section) => s.id === sourceSId);
-             if (!sourceSection) return;
+        newSections.forEach((s: Section, i: number) => {
+            s.title = toRoman(i + 1);
+            s.questions.forEach((q: Question, j: number) => { q.questionNumber = (j + 1).toString(); });
+        });
 
-             const sourceQIndex = sourceSection.questions.findIndex((q:Question) => q.id === sourceQId);
-             if (sourceQIndex > -1) {
-                 [sourceQuestion] = sourceSection.questions.splice(sourceQIndex, 1);
-             }
-             if (!sourceQuestion) return;
-
-             const targetSection = newSections.find((s:Section) => s.id === targetSId);
-             if (!targetSection) return;
-             
-             const targetQIndex = targetQId ? targetSection.questions.findIndex((q:Question) => q.id === targetQId) : targetSection.questions.length;
-             targetSection.questions.splice(targetQIndex, 0, sourceQuestion);
-
-             newSections.forEach((section: Section) => {
-                section.questions.forEach((q, i) => { q.questionNumber = (i + 1).toString() });
-             });
-             updateSection(draggedItem.sectionId, 'questions', newSections);
-        }
-
-        handleDragEnd();
+        setCurrentExam(prev => ({ ...prev, sections: newSections }));
+        setDraggedItem(null);
     };
 
 
     const AutosaveIndicator = () => {
-        switch(autosaveStatus) {
-            case 'saving':
-                return <span className="text-sm text-gray-500 italic">Menyimpan...</span>;
-            case 'saved':
-                return <span className="text-sm text-green-600">Perubahan disimpan</span>;
-            case 'error':
-                 return <span className="text-sm text-red-600">Gagal menyimpan</span>;
-            default:
-                return <span className="text-sm text-gray-500">&nbsp;</span>;
-        }
+        if (autosaveStatus === 'saving') return <span className="text-sm text-gray-500 italic">Menyimpan...</span>;
+        if (autosaveStatus === 'saved') return <span className="text-sm text-green-600">Disimpan</span>;
+        if (autosaveStatus === 'error') return <span className="text-sm text-red-600">Gagal</span>;
+        return <span className="text-sm text-gray-500">&nbsp;</span>;
     };
 
     return (
-        <div className="max-w-4xl mx-auto pb-28">
+        <div className="max-w-4xl mx-auto px-4 sm:px-0">
             <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg mb-6">
                  <button 
-                    className="flex justify-between items-center w-full text-left mb-4"
+                    className="flex justify-between items-center w-full text-left"
                     onClick={() => setInfoCollapsed(p => !p)}
                     aria-expanded={!isInfoCollapsed}
                 >
                     <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">{exam ? 'Ubah Ujian' : 'Buat Ujian Baru'}</h2>
-                    <span className="text-blue-600">
+                    <span className="text-blue-600 p-2">
                         {isInfoCollapsed ? <ChevronDownIcon className="w-6 h-6" /> : <ChevronUpIcon className="w-6 h-6"/>}
                     </span>
                 </button>
                 
                 {!isInfoCollapsed && (
-                    <div className="border-t pt-4">
-                        <h3 className="text-xl font-semibold mb-4 text-gray-800">Informasi Ujian</h3>
+                    <div className="border-t pt-4 mt-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input type="text" placeholder="Judul Ujian (e.g. Ujian Akhir Semester)" value={currentExam.title} onChange={e => updateExamInfo('title', e.target.value)} className="p-2 border rounded-md bg-white" />
                             <input type="text" placeholder="Mata Pelajaran" value={currentExam.subject} onChange={e => updateExamInfo('subject', e.target.value)} className="p-2 border rounded-md bg-white" />
@@ -826,70 +759,32 @@ export default function Editor({
                 {currentExam.sections.map((section, sectionIndex) => (
                     <div 
                         key={section.id} 
-                        draggable 
-                        onDragStart={(e) => handleDragStart(e, 'section', section.id)}
-                        onDragEnd={handleDragEnd}
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, 'section', section.id)}
-                        onDragEnter={() => setDropTarget({type: 'section', sectionId: section.id})}
+                        draggable onDragStart={(e) => handleDragStart(e, 'section', section.id)}
+                        onDrop={(e) => handleDrop(e, section.id)} onDragOver={(e) => e.preventDefault()}
                         className={`transition-opacity ${draggedItem?.type === 'section' && draggedItem.sectionId === section.id ? 'opacity-50' : 'opacity-100'}`}
                     >
-                        {dropTarget?.type === 'section' && dropTarget.sectionId === section.id && draggedItem?.sectionId !== section.id && (
-                             <div className="h-2 bg-blue-400 rounded-full my-2 animate-pulse" />
-                        )}
                         <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg relative" >
                             <div className="absolute left-0 top-0 bottom-0 flex items-center -ml-2 sm:-ml-8 cursor-grab text-gray-400 hover:text-gray-700" title="Seret untuk menyusun ulang bagian">
                                 <DragHandleIcon />
                             </div>
-
                             <div className="flex justify-between items-center mb-4 border-b pb-2">
                                 <h3 className="text-xl font-semibold text-gray-800">Bagian Soal {toRoman(sectionIndex + 1)}</h3>
-                                {currentExam.sections.length > 1 && 
-                                    <button onClick={() => removeSection(section.id)} className="p-1 text-red-500 hover:bg-red-100 rounded-full"><TrashIcon className="w-5 h-5"/></button>
-                                }
+                                {currentExam.sections.length > 1 && <button onClick={() => removeSection(section.id)} className="p-1 text-red-500 hover:bg-red-100 rounded-full"><TrashIcon className="w-5 h-5"/></button>}
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 items-start">
                                 <input type="text" placeholder="Judul (e.g. I, A)" value={section.title} onChange={e => updateSection(section.id, 'title', e.target.value)} className="p-2 border rounded-md md:col-span-1 bg-white" />
-                                <div className="md:col-span-3">
-                                    <SimpleEditor
-                                        value={section.instruction}
-                                        onChange={(html) => updateSection(section.id, 'instruction', html)}
-                                        placeholder="Instruksi pengerjaan soal..."
-                                    />
-                                </div>
+                                <div className="md:col-span-3"><SimpleEditor value={section.instruction} onChange={(html) => updateSection(section.id, 'instruction', html)} placeholder="Instruksi pengerjaan soal..."/></div>
                             </div>
-                            
-                            <div onDrop={(e) => handleDrop(e, 'question', section.id)} onDragOver={handleDragOver} className="min-h-[2rem]">
-                            {section.questions.map((q) => (
-                                <div 
-                                    key={q.id}
-                                    draggable
-                                    onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, 'question', section.id, q.id); }}
-                                    onDragEnd={(e) => { e.stopPropagation(); handleDragEnd(); }}
-                                    onDrop={(e) => { e.stopPropagation(); handleDrop(e, 'question', section.id, q.id); }}
-                                    onDragEnter={(e) => { e.stopPropagation(); setDropTarget({type: 'question', sectionId: section.id, questionId: q.id}); }}
-                                    className={`relative transition-opacity ${draggedItem?.questionId === q.id ? 'opacity-50' : 'opacity-100'}`}
-                                >
-                                    {dropTarget?.type === 'question' && dropTarget.sectionId === section.id && dropTarget.questionId === q.id && draggedItem?.questionId !== q.id && (
-                                        <div className="h-1.5 bg-blue-400 rounded-full my-2" />
-                                    )}
-                                    <div className="flex items-start gap-1 sm:gap-2">
-                                        <div className="cursor-grab text-gray-400 hover:text-gray-700 pt-5" title="Seret untuk menyusun ulang soal">
-                                            <DragHandleIcon className="w-5 h-5"/>
-                                        </div>
-                                        <div className="flex-1">
-                                            <QuestionItem 
-                                                question={q}
-                                                updateQuestion={(uq) => updateQuestion(section.id, uq)}
-                                                removeQuestion={(qid) => removeQuestion(section.id, qid)}
-                                                onSaveToBank={handleSaveQuestionToBank}
-                                            />
+                            <div className="min-h-[1rem]">
+                                {section.questions.map((q) => (
+                                    <div key={q.id} draggable onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, 'question', section.id, q.id); }} onDrop={(e) => { e.stopPropagation(); handleDrop(e, section.id, q.id); }}>
+                                        <div className="flex items-start gap-1 sm:gap-2">
+                                            <div className="cursor-grab text-gray-400 hover:text-gray-700 pt-5" title="Seret untuk menyusun ulang soal"><DragHandleIcon className="w-5 h-5"/></div>
+                                            <div className="flex-1"><QuestionItem question={q} updateQuestion={(uq) => updateQuestion(section.id, uq)} removeQuestion={(qid) => removeQuestion(section.id, qid)} onSaveToBank={handleSaveQuestionToBank} /></div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
                             </div>
-
                             <div className="mt-6 border-t pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 flex-wrap">
                                 <p className="font-semibold text-gray-800">Tambah Soal:</p>
                                 <div className="flex gap-2 flex-wrap justify-center">
@@ -899,10 +794,7 @@ export default function Editor({
                                     <button onClick={() => addQuestion(section.id, QuestionType.MATCHING)} className="bg-violet-100 text-violet-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-violet-200">Menjodohkan</button>
                                     <button onClick={() => addQuestion(section.id, QuestionType.SHORT_ANSWER)} className="bg-lime-100 text-lime-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-lime-200">Isian Singkat</button>
                                     <button onClick={() => addQuestion(section.id, QuestionType.ESSAY)} className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-amber-200">Uraian</button>
-                                    <button onClick={() => handleOpenBankModal(section.id)} className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-indigo-200 flex items-center gap-1.5">
-                                        <ArchiveIcon className="w-4 h-4"/>
-                                        Dari Bank Soal
-                                    </button>
+                                    <button onClick={() => handleOpenBankModal(section.id)} className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-indigo-200 flex items-center gap-1.5"><ArchiveIcon className="w-4 h-4"/> Dari Bank Soal</button>
                                 </div>
                             </div>
                         </div>
@@ -920,20 +812,10 @@ export default function Editor({
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
                             <label className="text-sm font-medium text-gray-700 hidden sm:inline-block mr-2">Status:</label>
-                            <button 
-                                onClick={() => updateExamInfo('status', 'draft')}
-                                className={`px-3 py-1 rounded-full text-sm transition-colors ${currentExam.status === 'draft' ? 'bg-yellow-100 text-yellow-800 font-semibold ring-1 ring-yellow-300' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
-                                Draft
-                            </button>
-                            <button 
-                                onClick={() => updateExamInfo('status', 'finished')}
-                                className={`px-3 py-1 rounded-full text-sm transition-colors ${currentExam.status === 'finished' ? 'bg-green-100 text-green-800 font-semibold ring-1 ring-green-300' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
-                                Selesai
-                            </button>
+                            <button onClick={() => updateExamInfo('status', 'draft')} className={`px-3 py-1 rounded-full text-sm transition-colors ${currentExam.status === 'draft' ? 'bg-yellow-100 text-yellow-800 font-semibold ring-1 ring-yellow-300' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Draft</button>
+                            <button onClick={() => updateExamInfo('status', 'finished')} className={`px-3 py-1 rounded-full text-sm transition-colors ${currentExam.status === 'finished' ? 'bg-green-100 text-green-800 font-semibold ring-1 ring-green-300' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Selesai</button>
                         </div>
-                        <div className="hidden sm:block">
-                            <AutosaveIndicator />
-                        </div>
+                        <div className="hidden sm:block"><AutosaveIndicator /></div>
                     </div>
                     <div className="flex gap-2 sm:gap-4">
                         <button onClick={handleCancel} className="bg-gray-200 text-gray-900 px-3 sm:px-6 py-2 rounded-md hover:bg-gray-300 text-sm">Batal</button>
@@ -945,15 +827,7 @@ export default function Editor({
                     </div>
                 </div>
             </div>
-            {isBankModalOpen && (
-                <QuestionBankModal
-                    isOpen={isBankModalOpen}
-                    onClose={() => setBankModalOpen(false)}
-                    bank={bank}
-                    onAddQuestions={handleAddQuestionsFromBank}
-                    allExams={allExamsForMeta}
-                />
-            )}
+            {isBankModalOpen && <QuestionBankModal isOpen={isBankModalOpen} onClose={() => setBankModalOpen(false)} bank={bank} onAddQuestions={handleAddQuestionsFromBank} allExams={allExamsForMeta} />}
         </div>
     );
 }

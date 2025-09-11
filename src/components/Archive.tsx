@@ -43,7 +43,7 @@ const ExamCard: React.FC<{
     ];
 
     return (
-        <div className="p-4 border rounded-lg flex justify-between items-start gap-4 hover:bg-gray-50 transition-colors bg-white">
+        <div className="p-4 border rounded-lg flex justify-between items-start gap-4 hover:bg-gray-50 transition-colors bg-white shadow-sm">
             <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-lg text-blue-700 flex items-center gap-2 flex-wrap">
                     <span>{exam.title}</span>
@@ -97,7 +97,7 @@ export default function Archive({ exams, onEdit, onDelete, onPreview, onCreateNe
     const activeFilterCount = [filterSubject, filterGrade, filterStatus !== 'all'].filter(Boolean).length;
 
     return (
-        <div className="bg-gray-100 sm:bg-white p-0 sm:p-6 sm:rounded-lg">
+        <div className="sm:bg-white sm:p-6 sm:rounded-lg sm:shadow-lg">
             <div className="flex justify-between items-center mb-6 bg-white p-4 sm:p-0 rounded-lg sm:rounded-none shadow-sm sm:shadow-none">
                 <h2 className="text-2xl font-bold text-gray-900">Arsip Ujian</h2>
                 <div className="flex items-center gap-2">
