@@ -631,7 +631,7 @@ function App() {
                 </nav>
             </header>
             
-            <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 relative z-0 ${getBottomPadding()}`}>
+            <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 isolate ${getBottomPadding()}`}>
                 {renderView()}
                 <footer className="text-center py-4 text-xs sm:text-sm text-gray-500 no-print">
                     <p>&copy; {new Date().getFullYear()} Soal Genius. Dibuat dengan <HeartIcon className="w-4 h-4 inline text-red-500"/> untuk para pendidik.</p>
