@@ -636,7 +636,7 @@ export default function Editor({
     };
 
     return (
-        <div className="max-w-4xl mx-auto pb-40 sm:pb-28">
+        <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl font-bold mb-6 text-gray-900">{exam ? 'Ubah Ujian' : 'Buat Ujian Baru'}</h2>
 
             <div className="bg-white rounded-lg shadow-lg mb-6 overflow-hidden">

@@ -559,10 +559,10 @@ function App() {
                             </div>
                         </div>
 
-                        <div id="pdf-preview-container" className="overflow-x-auto pb-8">
+                        <div id="pdf-preview-container" className="overflow-x-auto">
                             <div 
                                 id="pdf-preview-content" 
-                                className="flex flex-col items-center gap-8 pt-20 print:pt-0 mx-auto"
+                                className="flex flex-col items-center gap-8 pt-32 print:pt-0 mx-auto"
                                 style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}
                             >
                                 {isPreviewingKey ? 
@@ -589,6 +589,21 @@ function App() {
             <div className="text-gray-700 space-y-2 pl-8 prose prose-sm max-w-none">{children}</div>
         </div>
     );
+    
+    const getBottomPadding = () => {
+        switch(view) {
+            case 'editor':
+                return 'pb-48 md:pb-24'; // Space for mobile nav + editor bar on mobile, and just editor bar on desktop
+            case 'archive':
+            case 'bank':
+            case 'settings':
+                return 'pb-24 md:pb-8'; // Space for mobile nav on mobile, and footer on desktop
+            case 'preview':
+                return 'pb-8'; // No fixed bottom elements, just standard padding
+            default:
+                return 'pb-24 md:pb-8';
+        }
+    };
 
     return (
         <div className="bg-gray-100 min-h-screen font-sans">
@@ -625,7 +640,7 @@ function App() {
                 </nav>
             </header>
             
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-24 md:pb-8">
+            <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 ${getBottomPadding()}`}>
                 {renderView()}
                 <footer className="text-center py-4 text-xs sm:text-sm text-gray-500 no-print">
                     <p>&copy; {new Date().getFullYear()} Soal Genius. Dibuat dengan <HeartIcon className="w-4 h-4 inline text-red-500"/> untuk para pendidik.</p>
