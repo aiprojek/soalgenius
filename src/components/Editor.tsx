@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Exam, Question, Option, Section, SubQuestion, BankQuestion } from '../types';
+import type { Exam, Question, Option, Section, SubQuestion, BankQuestion, MatchingItem } from '../types';
 import { QuestionType } from '../types';
 import QuestionBankModal from './QuestionBankModal';
 import { PlusIcon, TrashIcon, PrintIcon, BoldIcon, ItalicIcon, UnderlineIcon, PaletteIcon, BookmarkIcon, ArchiveIcon, AlignCenterIcon, AlignJustifyIcon, AlignLeftIcon, AlignRightIcon, DragHandleIcon, ChevronDownIcon, ChevronUpIcon } from './Icons';
 
 const instructionDefaults: Record<QuestionType, string> = {
     [QuestionType.MULTIPLE_CHOICE]: 'Berilah tanda silang (X) pada pilihan jawaban yang benar!',
+    [QuestionType.MULTIPLE_CHOICE_COMPLEX]: 'Pilihlah jawaban yang benar dengan memberi tanda centang (✓). Jawaban benar bisa lebih dari satu.',
+    [QuestionType.TRUE_FALSE]: 'Tentukan apakah pernyataan berikut Benar atau Salah!',
+    [QuestionType.MATCHING]: 'Jodohkan pernyataan di kolom A dengan jawaban yang sesuai di kolom B!',
     [QuestionType.SHORT_ANSWER]: 'Isilah titik-titik di bawah ini dengan jawaban yang benar dan tepat!',
     [QuestionType.ESSAY]: 'Jawablah pertanyaan di bawah ini dengan benar!',
 };
@@ -78,27 +81,84 @@ const QuestionItem: React.FC<{
     const imageInputRef = useRef<HTMLInputElement>(null);
     const [justSaved, setJustSaved] = useState(false);
 
-    const handleTextChange = (html: string) => updateQuestion({ ...question, questionText: html });
-    const handleOptionChange = (optId: string, field: 'text' | 'label', value: string) => updateQuestion({ ...question, options: question.options.map(opt => opt.id === optId ? {...opt, [field]: value} : opt) });
-    const handleAddOption = () => updateQuestion({ ...question, options: [...question.options, { id: crypto.randomUUID(), text: '', label: String.fromCharCode(97 + question.options.length) }] });
-    const handleRemoveOption = (optId: string) => updateQuestion({ ...question, options: question.options.filter(opt => opt.id !== optId) });
-    const setCorrectAnswer = (optId: string) => updateQuestion({ ...question, correctAnswerId: optId });
-    const handleAddSubQuestion = () => updateQuestion({ ...question, subQuestions: [...(question.subQuestions || []), { id: crypto.randomUUID(), number: String.fromCharCode(97 + (question.subQuestions?.length || 0)), text: '' }] });
-    const handleUpdateSubQuestion = (subId: string, field: 'number' | 'text', value: string) => updateQuestion({ ...question, subQuestions: question.subQuestions?.map(sub => sub.id === subId ? { ...sub, [field]: value } : sub) });
-    const handleRemoveSubQuestion = (subId: string) => updateQuestion({ ...question, subQuestions: question.subQuestions?.filter(sub => sub.id !== subId) });
+    const handleTextChange = (html: string) => {
+        updateQuestion({ ...question, questionText: html });
+    };
+    
+    const handleOptionChange = (optId: string, field: 'text' | 'label', value: string) => {
+        const newOptions = question.options.map(opt => opt.id === optId ? {...opt, [field]: value} : opt);
+        updateQuestion({ ...question, options: newOptions });
+    };
+    
+    const handleAddOption = () => {
+        const nextIndex = question.options.length;
+        const defaultLabel = String.fromCharCode(97 + nextIndex);
+        
+        const newOption: Option = { id: crypto.randomUUID(), text: '', label: defaultLabel };
+        updateQuestion({ ...question, options: [...question.options, newOption] });
+    };
+
+    const handleRemoveOption = (optId: string) => {
+        const newOptions = question.options.filter(opt => opt.id !== optId);
+        updateQuestion({ ...question, options: newOptions });
+    };
+    
+    const setCorrectAnswer = (optId: string) => {
+        updateQuestion({ ...question, correctAnswerIds: [optId] });
+    };
+
+    const toggleCorrectAnswer = (optId: string) => {
+        const currentAnswers = question.correctAnswerIds || [];
+        const newAnswers = currentAnswers.includes(optId)
+            ? currentAnswers.filter(id => id !== optId)
+            : [...currentAnswers, optId];
+        updateQuestion({ ...question, correctAnswerIds: newAnswers });
+    };
+
+    const handleAddSubQuestion = () => {
+        const nextChar = String.fromCharCode(97 + (question.subQuestions?.length || 0)); // a, b, c...
+        const newSub: SubQuestion = {
+            id: crypto.randomUUID(),
+            number: nextChar,
+            text: '',
+        };
+        const newSubQuestions = [...(question.subQuestions || []), newSub];
+        updateQuestion({ ...question, subQuestions: newSubQuestions });
+    };
+    
+    const handleUpdateSubQuestion = (subId: string, field: 'number' | 'text', value: string) => {
+        const newSubQuestions = question.subQuestions?.map(sub => 
+            sub.id === subId ? { ...sub, [field]: value } : sub
+        );
+        updateQuestion({ ...question, subQuestions: newSubQuestions });
+    };
+
+    const handleRemoveSubQuestion = (subId: string) => {
+        const newSubQuestions = question.subQuestions?.filter(sub => sub.id !== subId);
+        updateQuestion({ ...question, subQuestions: newSubQuestions });
+    };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (file.size > 1 * 1024 * 1024) { alert('Ukuran gambar terlalu besar. Maksimal 1MB.'); return; }
+
+        if (file.size > 1 * 1024 * 1024) { // 1MB limit
+            alert('Ukuran gambar terlalu besar. Maksimal 1MB.');
+            return;
+        }
+
         const reader = new FileReader();
-        reader.onloadend = () => updateQuestion({ ...question, image: reader.result as string });
+        reader.onloadend = () => {
+            updateQuestion({ ...question, image: reader.result as string });
+        };
         reader.readAsDataURL(file);
     };
 
     const handleRemoveImage = () => {
         updateQuestion({ ...question, image: null });
-        if (imageInputRef.current) imageInputRef.current.value = '';
+        if (imageInputRef.current) {
+            imageInputRef.current.value = '';
+        }
     };
     
     const handleSaveToBankClick = () => {
@@ -107,15 +167,55 @@ const QuestionItem: React.FC<{
         setTimeout(() => setJustSaved(false), 2000);
     };
 
+    // --- Matching Question Handlers ---
+    const handleMatchingItemChange = (type: 'premises' | 'responses', id: string, text: string) => {
+        const key = type === 'premises' ? 'matchingPremises' : 'matchingResponses';
+        const items = (question[key] || []).map(item => item.id === id ? { ...item, text } : item);
+        updateQuestion({ ...question, [key]: items });
+    };
+
+    const addMatchingItem = (type: 'premises' | 'responses') => {
+        const key = type === 'premises' ? 'matchingPremises' : 'matchingResponses';
+        const newItem: MatchingItem = { id: crypto.randomUUID(), text: '' };
+        updateQuestion({ ...question, [key]: [...(question[key] || []), newItem] });
+    };
+
+    const removeMatchingItem = (type: 'premises' | 'responses', id: string) => {
+        const key = type === 'premises' ? 'matchingPremises' : 'matchingResponses';
+        const items = (question[key] || []).filter(item => item.id !== id);
+        updateQuestion({ ...question, [key]: items });
+    };
+
+    const handleMatchingAnswerChange = (premiseId: string, responseId: string) => {
+        let newAnswers = [...(question.answerKeyMatching || [])];
+        const existingIndex = newAnswers.findIndex(ans => ans.premiseId === premiseId);
+        if (responseId) { // Add or update answer
+            if (existingIndex > -1) newAnswers[existingIndex] = { premiseId, responseId };
+            else newAnswers.push({ premiseId, responseId });
+        } else { // Remove answer if dropdown is cleared
+            if (existingIndex > -1) newAnswers.splice(existingIndex, 1);
+        }
+        updateQuestion({ ...question, answerKeyMatching: newAnswers });
+    };
+
+
     return (
         <div className="bg-white p-4 rounded-lg border shadow-sm mt-4">
             <div className="flex justify-between items-start mb-2">
                  <div className="flex items-center gap-2 flex-grow">
-                    <input type="text" value={question.questionNumber} onChange={(e) => updateQuestion({ ...question, questionNumber: e.target.value })} className="w-12 p-1 border rounded-md bg-white text-center font-bold" aria-label="Nomor Soal"/>
+                    <input
+                        type="text"
+                        value={question.questionNumber}
+                        onChange={(e) => updateQuestion({ ...question, questionNumber: e.target.value })}
+                        className="w-12 p-1 border rounded-md bg-white text-center font-bold"
+                        aria-label="Nomor Soal"
+                    />
                     <label className="font-semibold text-gray-800">.</label>
                 </div>
                 <div className="flex items-center gap-1">
-                    <button onClick={handleSaveToBankClick} className={`p-1 ${justSaved ? 'text-green-600' : 'text-blue-600 hover:bg-blue-100'} rounded-full flex-shrink-0`} title="Simpan ke Bank Soal"><BookmarkIcon className="w-5 h-5"/></button>
+                    <button onClick={handleSaveToBankClick} className={`p-1 ${justSaved ? 'text-green-600' : 'text-blue-600 hover:bg-blue-100'} rounded-full flex-shrink-0`} title="Simpan ke Bank Soal">
+                        <BookmarkIcon className="w-5 h-5"/>
+                    </button>
                     <button onClick={() => removeQuestion(question.id)} className="p-1 text-red-500 hover:bg-red-100 rounded-full flex-shrink-0"><TrashIcon className="w-5 h-5"/></button>
                 </div>
             </div>
@@ -124,57 +224,235 @@ const QuestionItem: React.FC<{
                 {question.image ? (
                     <div className="relative group w-fit">
                         <img src={question.image} alt="Lampiran Soal" className="max-w-full max-h-48 rounded-md border object-contain" />
-                        <button onClick={handleRemoveImage} className="absolute top-1 right-1 bg-black bg-opacity-50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-xs flex items-center gap-1"><TrashIcon className="w-3 h-3"/> Hapus</button>
+                        <button 
+                            onClick={handleRemoveImage} 
+                            className="absolute top-1 right-1 bg-black bg-opacity-50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-xs flex items-center gap-1"
+                        >
+                            <TrashIcon className="w-3 h-3"/> Hapus
+                        </button>
                     </div>
                 ) : (
                     <div className="flex items-center gap-2">
-                        <button onClick={() => imageInputRef.current?.click()} className="text-sm text-blue-600 hover:underline flex items-center gap-1"><PlusIcon className="w-4 h-4"/> Tambah Gambar</button>
+                        <button onClick={() => imageInputRef.current?.click()} className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                           <PlusIcon className="w-4 h-4"/> Tambah Gambar
+                        </button>
                         <span className="text-xs text-gray-500">(Maks. 1MB)</span>
-                        <input type="file" ref={imageInputRef} onChange={handleImageUpload} accept="image/png, image/jpeg, image/gif" className="hidden" aria-label="Upload Gambar Soal"/>
+                        <input
+                            type="file"
+                            ref={imageInputRef}
+                            onChange={handleImageUpload}
+                            accept="image/png, image/jpeg, image/gif"
+                            className="hidden"
+                            aria-label="Upload Gambar Soal"
+                        />
                     </div>
                 )}
             </div>
 
-            <SimpleEditor value={question.questionText} onChange={handleTextChange} placeholder="Tulis pertanyaan di sini..."/>
+            <SimpleEditor
+                value={question.questionText}
+                onChange={handleTextChange}
+                placeholder="Tulis pertanyaan atau instruksi soal di sini..."
+            />
 
-            {question.type === 'MULTIPLE_CHOICE' && (
+            {question.type === QuestionType.MULTIPLE_CHOICE && (
                 <div className="mt-4 space-y-2">
                     <h5 className="font-semibold text-sm text-gray-800">Opsi Jawaban:</h5>
                     {question.options.map((opt, optIndex) => (
                         <div key={opt.id} className="flex items-center gap-2">
-                            <input type="radio" name={`correct-answer-${question.id}`} checked={question.correctAnswerId === opt.id} onChange={() => setCorrectAnswer(opt.id)} className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 flex-shrink-0" title="Tandai sebagai jawaban benar"/>
-                            <input type="text" value={opt.label} onChange={(e) => handleOptionChange(opt.id, 'label', e.target.value)} className="w-10 p-1 border rounded-md bg-white text-center" aria-label={`Label Opsi ${optIndex + 1}`}/>
+                            <input
+                                type="radio"
+                                name={`correct-answer-${question.id}`}
+                                checked={question.correctAnswerIds?.[0] === opt.id}
+                                onChange={() => setCorrectAnswer(opt.id)}
+                                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 flex-shrink-0"
+                                title="Tandai sebagai jawaban benar"
+                            />
+                             <input
+                                type="text"
+                                value={opt.label}
+                                onChange={(e) => handleOptionChange(opt.id, 'label', e.target.value)}
+                                className="w-10 p-1 border rounded-md bg-white text-center"
+                                aria-label={`Label Opsi ${optIndex + 1}`}
+                            />
                             <span className="font-semibold">.</span>
-                            <div className="flex-1"><SimpleEditor value={opt.text} onChange={(html) => handleOptionChange(opt.id, 'text', html)} placeholder={`Teks untuk opsi ${opt.label}`}/></div>
-                            {question.options.length > 1 && <button onClick={() => handleRemoveOption(opt.id)} className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><TrashIcon className="w-4 h-4"/></button>}
+                            <div className="flex-1">
+                                <SimpleEditor
+                                    value={opt.text}
+                                    onChange={(html) => handleOptionChange(opt.id, 'text', html)}
+                                    placeholder={`Teks untuk opsi ${opt.label}`}
+                                />
+                            </div>
+                            {question.options.length > 1 &&
+                                <button onClick={() => handleRemoveOption(opt.id)} className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><TrashIcon className="w-4 h-4"/></button>
+                            }
                         </div>
                     ))}
                     <button onClick={handleAddOption} className="text-sm text-blue-600 hover:underline">+ Tambah Opsi</button>
+                </div>
+            )}
+
+            {question.type === QuestionType.MULTIPLE_CHOICE_COMPLEX && (
+                <div className="mt-4 space-y-2">
+                    <h5 className="font-semibold text-sm text-gray-800">Opsi Jawaban (pilih satu atau lebih):</h5>
+                    {question.options.map((opt, optIndex) => (
+                        <div key={opt.id} className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                checked={question.correctAnswerIds?.includes(opt.id)}
+                                onChange={() => toggleCorrectAnswer(opt.id)}
+                                className="h-4 w-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500 flex-shrink-0"
+                                title="Tandai sebagai jawaban benar"
+                            />
+                             <input
+                                type="text"
+                                value={opt.label}
+                                onChange={(e) => handleOptionChange(opt.id, 'label', e.target.value)}
+                                className="w-10 p-1 border rounded-md bg-white text-center"
+                                aria-label={`Label Opsi ${optIndex + 1}`}
+                            />
+                            <span className="font-semibold">.</span>
+                            <div className="flex-1">
+                                <SimpleEditor
+                                    value={opt.text}
+                                    onChange={(html) => handleOptionChange(opt.id, 'text', html)}
+                                    placeholder={`Teks untuk opsi ${opt.label}`}
+                                />
+                            </div>
+                            {question.options.length > 1 &&
+                                <button onClick={() => handleRemoveOption(opt.id)} className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><TrashIcon className="w-4 h-4"/></button>
+                            }
+                        </div>
+                    ))}
+                    <button onClick={handleAddOption} className="text-sm text-blue-600 hover:underline">+ Tambah Opsi</button>
+                </div>
+            )}
+
+            {question.type === QuestionType.TRUE_FALSE && (
+                <div className="mt-4">
+                    <h5 className="font-semibold text-sm text-gray-800 mb-2">Kunci Jawaban:</h5>
+                     <div className="flex items-center gap-6">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name={`tf-answer-${question.id}`} value="true" checked={question.trueFalseAnswer === 'true'} onChange={e => updateQuestion({...question, trueFalseAnswer: 'true'})} className="h-4 w-4"/>
+                            <span>Benar</span>
+                        </label>
+                         <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name={`tf-answer-${question.id}`} value="false" checked={question.trueFalseAnswer === 'false'} onChange={e => updateQuestion({...question, trueFalseAnswer: 'false'})} className="h-4 w-4"/>
+                            <span>Salah</span>
+                        </label>
+                    </div>
+                </div>
+            )}
+
+            {question.type === QuestionType.MATCHING && (
+                <div className="mt-4 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Kolom A (Premises) */}
+                        <div className="space-y-2">
+                            <h5 className="font-semibold text-sm text-gray-800">Kolom A (Pernyataan)</h5>
+                            {question.matchingPremises?.map((premise, index) => (
+                                <div key={premise.id} className="flex items-center gap-2">
+                                    <span className="font-semibold">{index + 1}.</span>
+                                    <div className="flex-1">
+                                        <SimpleEditor value={premise.text} onChange={html => handleMatchingItemChange('premises', premise.id, html)} placeholder="Tulis pernyataan..."/>
+                                    </div>
+                                    <button onClick={() => removeMatchingItem('premises', premise.id)} className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><TrashIcon className="w-4 h-4"/></button>
+                                </div>
+                            ))}
+                            <button onClick={() => addMatchingItem('premises')} className="text-sm text-blue-600 hover:underline">+ Tambah Pernyataan</button>
+                        </div>
+                        {/* Kolom B (Responses) */}
+                        <div className="space-y-2">
+                             <h5 className="font-semibold text-sm text-gray-800">Kolom B (Jawaban)</h5>
+                             {question.matchingResponses?.map((response, index) => (
+                                <div key={response.id} className="flex items-center gap-2">
+                                    <span className="font-semibold">{String.fromCharCode(65 + index)}.</span>
+                                    <div className="flex-1">
+                                        <SimpleEditor value={response.text} onChange={html => handleMatchingItemChange('responses', response.id, html)} placeholder="Tulis jawaban..."/>
+                                    </div>
+                                    <button onClick={() => removeMatchingItem('responses', response.id)} className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"><TrashIcon className="w-4 h-4"/></button>
+                                </div>
+                            ))}
+                            <button onClick={() => addMatchingItem('responses')} className="text-sm text-blue-600 hover:underline">+ Tambah Jawaban</button>
+                        </div>
+                    </div>
+                     {/* Kunci Jawaban */}
+                    <div className="pt-4 border-t">
+                        <h5 className="font-semibold text-sm text-gray-800 mb-2">Kunci Jawaban (Menjodohkan):</h5>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            {question.matchingPremises?.map((premise, index) => (
+                                <div key={premise.id} className="flex items-center gap-2">
+                                    <label className="font-semibold flex-shrink-0">Soal {index + 1} &rarr;</label>
+                                    <select 
+                                        value={question.answerKeyMatching?.find(ans => ans.premiseId === premise.id)?.responseId || ''}
+                                        onChange={e => handleMatchingAnswerChange(premise.id, e.target.value)}
+                                        className="p-1 border rounded-md bg-white w-full"
+                                    >
+                                        <option value="">Pilih...</option>
+                                        {question.matchingResponses?.map((response, rIndex) => (
+                                            <option key={response.id} value={response.id}>
+                                                Opsi {String.fromCharCode(65 + rIndex)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             )}
             
             {(question.type === 'ESSAY' || question.type === 'SHORT_ANSWER') && (
                 <div className="mt-4 space-y-3">
                     <div>
-                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-1"><span role="img" aria-label="Key">🔑</span><span>Kunci Jawaban (tidak akan tercetak)</span></label>
-                         <SimpleEditor value={question.answerKey || ''} onChange={(html) => updateQuestion({ ...question, answerKey: html })} placeholder="Masukkan poin-poin kunci atau jawaban yang diharapkan..." className="bg-gray-50 text-sm"/>
+                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-1">
+                            <span role="img" aria-label="Key">🔑</span>
+                            <span>Kunci Jawaban (tidak akan tercetak)</span>
+                        </label>
+                         <SimpleEditor
+                            value={question.answerKey || ''}
+                            onChange={(html) => updateQuestion({ ...question, answerKey: html })}
+                            placeholder="Masukkan poin-poin kunci atau jawaban yang diharapkan..."
+                            className="bg-gray-50 text-sm"
+                        />
                     </div>
+
                     <div className="pl-4 border-l-2 border-gray-200">
                         <h5 className="font-semibold text-sm text-gray-800 mb-2">Sub Soal (opsional):</h5>
                         {question.subQuestions?.map((sub) => (
                              <div key={sub.id} className="flex items-start gap-2 mb-2">
-                                <input type="text" value={sub.number} onChange={(e) => handleUpdateSubQuestion(sub.id, 'number', e.target.value)} className="w-10 p-1 border rounded-md bg-white text-center" aria-label="Nomor Sub Soal"/>
+                                <input
+                                    type="text"
+                                    value={sub.number}
+                                    onChange={(e) => handleUpdateSubQuestion(sub.id, 'number', e.target.value)}
+                                    className="w-10 p-1 border rounded-md bg-white text-center"
+                                    aria-label="Nomor Sub Soal"
+                                />
                                 <span className="pt-2">.</span>
-                                <div className='flex-1'><SimpleEditor value={sub.text} onChange={(html) => handleUpdateSubQuestion(sub.id, 'text', html)} placeholder="Tulis sub pertanyaan di sini..."/></div>
+                                <div className='flex-1'>
+                                    <SimpleEditor
+                                        value={sub.text}
+                                        onChange={(html) => handleUpdateSubQuestion(sub.id, 'text', html)}
+                                        placeholder="Tulis sub pertanyaan di sini..."
+                                    />
+                                </div>
                                 <button onClick={() => handleRemoveSubQuestion(sub.id)} className="p-1 text-gray-500 hover:bg-gray-100 rounded-full mt-2"><TrashIcon className="w-4 h-4"/></button>
                             </div>
                         ))}
-                        <button onClick={handleAddSubQuestion} className="text-sm text-blue-600 hover:underline mt-2 flex items-center gap-1"><PlusIcon className="w-4 h-4"/> Tambah Sub Soal</button>
+                        <button onClick={handleAddSubQuestion} className="text-sm text-blue-600 hover:underline mt-2 flex items-center gap-1">
+                            <PlusIcon className="w-4 h-4"/> Tambah Sub Soal
+                        </button>
                     </div>
+
                     {question.type === 'ESSAY' && (
                         <div className="mt-3 pt-3 border-t border-gray-200">
                             <label className="flex items-center cursor-pointer">
-                                <input type="checkbox" checked={!!question.includeAnswerSpace} onChange={(e) => updateQuestion({ ...question, includeAnswerSpace: e.target.checked })} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"/>
+                                <input
+                                    type="checkbox"
+                                    checked={!!question.includeAnswerSpace}
+                                    onChange={(e) => updateQuestion({ ...question, includeAnswerSpace: e.target.checked })}
+                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
                                 <span className="ml-2 text-sm font-medium text-gray-700">Sediakan ruang jawaban di lembar soal</span>
                             </label>
                         </div>
@@ -266,12 +544,35 @@ export default function Editor({
     };
     
     const addQuestion = (sectionId: string, type: QuestionType) => {
-        setCurrentExam(prev => ({...prev, sections: prev.sections.map(s => {
-            if (s.id !== sectionId) return s;
-            const newQ: Question = { id: crypto.randomUUID(), type, questionNumber: (s.questions.length + 1).toString(), questionText: '', image: null, options: type === 'MULTIPLE_CHOICE' ? Array.from({ length: 4 }, (_, i) => ({ id: crypto.randomUUID(), text: '', label: String.fromCharCode(97 + i) })) : [], includeAnswerSpace: false, subQuestions: [], answerKey: '' };
-            const isInstructionEmpty = !s.instruction || (s.instruction.replace(/<[^>]*>?/gm, '').trim() === '');
-            return { ...s, instruction: isInstructionEmpty ? instructionDefaults[type] : s.instruction, questions: [...s.questions, newQ] };
-        })}));
+        setCurrentExam(prev => ({
+            ...prev,
+            sections: prev.sections.map(s => {
+                if (s.id === sectionId) {
+                    const newQuestion: Question = {
+                        id: crypto.randomUUID(),
+                        type,
+                        questionNumber: (s.questions.length + 1).toString(),
+                        questionText: '',
+                        image: null,
+                        options: type === QuestionType.MULTIPLE_CHOICE || type === QuestionType.MULTIPLE_CHOICE_COMPLEX ? Array.from({ length: 4 }, (v, i) => ({ id: crypto.randomUUID(), text: '', label: String.fromCharCode(97 + i) })) : [],
+                        correctAnswerIds: [],
+                        includeAnswerSpace: false,
+                        subQuestions: [],
+                        answerKey: '',
+                        trueFalseAnswer: type === QuestionType.TRUE_FALSE ? 'true' : null,
+                        matchingPremises: type === QuestionType.MATCHING ? Array.from({ length: 3 }, () => ({ id: crypto.randomUUID(), text: '' })) : [],
+                        matchingResponses: type === QuestionType.MATCHING ? Array.from({ length: 3 }, () => ({ id: crypto.randomUUID(), text: '' })) : [],
+                        answerKeyMatching: [],
+                    };
+
+                    const isInstructionEmpty = !s.instruction || (s.instruction.replace(/<[^>]*>?/gm, '').trim() === '');
+                    
+                    const instruction = isInstructionEmpty ? instructionDefaults[type] : s.instruction;
+                    return { ...s, instruction, questions: [...s.questions, newQuestion] };
+                }
+                return s;
+            })
+        }));
     };
     
     const updateQuestion = (sectionId: string, updatedQuestion: Question) => setCurrentExam(prev => ({ ...prev, sections: prev.sections.map(s => s.id === sectionId ? { ...s, questions: s.questions.map(q => q.id === updatedQuestion.id ? updatedQuestion : q) } : s) }));
@@ -387,6 +688,9 @@ export default function Editor({
                                 <p className="font-semibold text-gray-800">Tambah Soal:</p>
                                 <div className="flex gap-2 flex-wrap justify-center">
                                     <button onClick={() => addQuestion(section.id, QuestionType.MULTIPLE_CHOICE)} className="bg-sky-100 text-sky-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-sky-200">Pilihan Ganda</button>
+                                    <button onClick={() => addQuestion(section.id, QuestionType.MULTIPLE_CHOICE_COMPLEX)} className="bg-cyan-100 text-cyan-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-cyan-200">PG Kompleks</button>
+                                    <button onClick={() => addQuestion(section.id, QuestionType.TRUE_FALSE)} className="bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-rose-200">Benar-Salah</button>
+                                    <button onClick={() => addQuestion(section.id, QuestionType.MATCHING)} className="bg-violet-100 text-violet-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-violet-200">Menjodohkan</button>
                                     <button onClick={() => addQuestion(section.id, QuestionType.SHORT_ANSWER)} className="bg-lime-100 text-lime-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-lime-200">Isian Singkat</button>
                                     <button onClick={() => addQuestion(section.id, QuestionType.ESSAY)} className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-amber-200">Uraian</button>
                                     <button onClick={() => handleOpenBankModal(section.id)} className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-indigo-200 flex items-center gap-1.5"><ArchiveIcon className="w-4 h-4"/> Dari Bank Soal</button>

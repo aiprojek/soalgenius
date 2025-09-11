@@ -8,6 +8,7 @@ import Modal from './components/Modal';
 import WelcomeModal from './components/WelcomeModal';
 import QuestionBank from './components/QuestionBank';
 import Settings from './components/Settings';
+import { QuestionType } from './types';
 import { SettingsIcon, DownloadIcon, UploadIcon, LogoIcon, PlusIcon, TrashIcon, ZoomInIcon, ZoomOutIcon, FileCodeIcon, PrintIcon, ArchiveIcon, InfoIcon, HeartIcon, MessageSquareIcon, GithubIcon, BookmarkIcon, CheckCircleIcon, WandIcon, CoffeeIcon, DragHandleIcon, EditorIcon, BankIcon, MenuIcon, ShareIcon } from './components/Icons';
 
 const RawHtmlRenderer: React.FC<{ html: string; className?: string }> = ({ html, className }) => (
@@ -161,7 +162,7 @@ const PdfPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ exam, 
                                                 </div>
                                             )}
 
-                                            {q.type === 'MULTIPLE_CHOICE' && (
+                                            {(q.type === QuestionType.MULTIPLE_CHOICE || q.type === QuestionType.MULTIPLE_CHOICE_COMPLEX) && (
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
                                                     {q.options.map((opt) => (
                                                         <div key={opt.id} className="flex items-baseline">
@@ -169,6 +170,26 @@ const PdfPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ exam, 
                                                             <RawHtmlRenderer html={opt.text} className="break-words flex-1 min-w-0 ml-2" />
                                                         </div>
                                                     ))}
+                                                </div>
+                                            )}
+                                            {q.type === QuestionType.MATCHING && (
+                                                <div className="mt-2 flex gap-8">
+                                                    <div className="flex-1 space-y-2">
+                                                        {q.matchingPremises?.map((premise, index) => (
+                                                            <div key={premise.id} className="flex items-start">
+                                                                <span className="mr-2">{index + 1}.</span>
+                                                                <RawHtmlRenderer html={premise.text} className="flex-1 break-words" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="flex-1 space-y-2">
+                                                         {q.matchingResponses?.map((response, index) => (
+                                                            <div key={response.id} className="flex items-start">
+                                                                <span className="mr-2">{String.fromCharCode(65 + index)}.</span>
+                                                                <RawHtmlRenderer html={response.text} className="flex-1 break-words" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             )}
                                             {q.type === 'ESSAY' && q.includeAnswerSpace && (
@@ -222,10 +243,31 @@ const AnswerKeyPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ 
                                 <React.Fragment key={q.id}>
                                     <div className="font-bold text-right">{q.questionNumber}.</div>
                                     <div>
-                                        {q.type === 'MULTIPLE_CHOICE' && (
-                                            q.options.find(o => o.id === q.correctAnswerId)?.label?.toUpperCase() || <span className="text-red-600 italic">Belum diatur</span>
+                                        {q.type === QuestionType.MULTIPLE_CHOICE && (
+                                            q.options.find(o => o.id === q.correctAnswerIds?.[0])?.label?.toUpperCase() || <span className="text-red-600 italic">Belum diatur</span>
                                         )}
-                                        {(q.type === 'ESSAY' || q.type === 'SHORT_ANSWER') && (
+                                        {q.type === QuestionType.MULTIPLE_CHOICE_COMPLEX && (
+                                            (q.correctAnswerIds && q.correctAnswerIds.length > 0) ?
+                                            q.options
+                                                .filter(o => q.correctAnswerIds?.includes(o.id))
+                                                .map(o => o.label.toUpperCase())
+                                                .join(', ')
+                                            : <span className="text-red-600 italic">Belum diatur</span>
+                                        )}
+                                        {q.type === QuestionType.TRUE_FALSE && (
+                                            q.trueFalseAnswer ? (q.trueFalseAnswer === 'true' ? 'Benar' : 'Salah') : <span className="text-red-600 italic">Belum diatur</span>
+                                        )}
+                                        {q.type === QuestionType.MATCHING && (
+                                            (q.answerKeyMatching && q.answerKeyMatching.length > 0) ?
+                                            q.answerKeyMatching.map(pair => {
+                                                const premiseIndex = q.matchingPremises?.findIndex(p => p.id === pair.premiseId);
+                                                const responseIndex = q.matchingResponses?.findIndex(r => r.id === pair.responseId);
+                                                if (premiseIndex === -1 || responseIndex === -1) return null;
+                                                return `${premiseIndex + 1}-${String.fromCharCode(65 + responseIndex)}`;
+                                            }).filter(Boolean).join(', ')
+                                            : <span className="text-red-600 italic">Belum diatur</span>
+                                        )}
+                                        {(q.type === QuestionType.ESSAY || q.type === QuestionType.SHORT_ANSWER) && (
                                             <RawHtmlRenderer html={q.answerKey || '-'} />
                                         )}
                                     </div>
@@ -243,21 +285,20 @@ const AnswerKeyPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ 
 function App() {
     type View = 'archive' | 'editor' | 'preview' | 'bank' | 'settings';
     const [view, setView] = useState<View>('archive');
+    const [previousView, setPreviousView] = useState<View>('archive');
     const [currentExam, setCurrentExam] = useState<Exam | null>(null);
     const [isPreviewingKey, setIsPreviewingKey] = useState(false);
     const [showIndicator, setShowIndicator] = useState<{message: string, type: 'success' | 'error'} | null>(null);
     const [isInfoModalOpen, setInfoModalOpen] = useState(false);
     const [isWelcomeModalOpen, setWelcomeModalOpen] = useState(false);
     const [isHeaderMenuOpen, setHeaderMenuOpen] = useState(false);
-    const [isExportMenuOpen, setExportMenuOpen] = useState(false);
     const [zoom, setZoom] = useState(1);
-    const exportMenuRef = useRef<HTMLDivElement>(null);
     const headerMenuRef = useRef<HTMLDivElement>(null);
 
     const defaultHeaderSettings: HeaderSettings = {
         showHeader: true,
         showLogo: true,
-        logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGESURBVHhe7dixTsNQEATgd98SAvw/w0sDVAQSNeFjQsU6My3Zdfep9e+NnWmvvfa2U255/1dO5wSAQkAAKCAACAgABAACCgEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIDcde+1t1/tA2dIeT5gdiueAAAAAElFTkSuQmCC', // Default placeholder
+        logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGESURBVHhe7dixTsNQEATgd98SAvw/w0sDVAQSNeFjQsU6My3Zdfep9e+NnWmvvfa2U255/1dO5wSAQkAAKCAACAgABAACCgEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIDcde+1t1/tA2dIeT5gdiueAAAAAElFTkSuQmCC', // Default placeholder
         headerLines: [
             { id: '1', text: 'PEMERINTAH KOTA CONTOH' },
             { id: '2', text: 'DINAS PENDIDIKAN DAN KEBUDAYAAN' },
@@ -297,9 +338,6 @@ function App() {
             if (headerMenuRef.current && !headerMenuRef.current.contains(event.target as Node)) {
                 setHeaderMenuOpen(false);
             }
-            if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
-                setExportMenuOpen(false);
-            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -338,21 +376,21 @@ function App() {
         displayIndicator('Ujian berhasil disimpan!', 'success');
     };
 
-    const handlePreview = (exam: Exam) => {
+    const handlePreview = (exam: Exam, fromView: View) => {
         setCurrentExam(exam);
+        setPreviousView(fromView); // Remember where we came from
         setView('preview');
         setIsPreviewingKey(false);
         
-        // Calculate initial zoom for mobile to fit paper width
         const isMobile = window.innerWidth < 768;
         if (isMobile) {
-            const containerPadding = 24; // A bit of breathing room
+            const containerPadding = 24; 
             const paperWidthPx = 210 * 3.78; 
             const screenWidth = window.innerWidth;
             const initialZoom = (screenWidth - containerPadding) / paperWidthPx;
             setZoom(Math.min(initialZoom, 1));
         } else {
-            setZoom(0.8); // Default zoom for larger screens
+            setZoom(0.8);
         }
     };
 
@@ -425,7 +463,6 @@ function App() {
         } else {
             printWindow.onload = tryPrint;
         }
-        setExportMenuOpen(false);
     };
 
     const handleExportHtml = () => {
@@ -485,48 +522,41 @@ function App() {
             console.error("HTML export failed:", error);
             displayIndicator('Gagal mengekspor HTML.', 'error');
         }
-        setExportMenuOpen(false);
     };
 
     const renderView = () => {
-        const archiveProps = { 
-            exams, 
-            onEdit: handleEdit, 
-            onDelete: deleteExam, 
-            onPreview: handlePreview,
-            onCreateNew: handleCreateNew,
-            onDuplicate: duplicateExam,
-            onGenerateVariant: generateVariant,
-            activeView: view
-        };
+        const archiveProps = { exams, onEdit: handleEdit, onDelete: deleteExam, onPreview: (exam: Exam) => handlePreview(exam, 'archive'), onCreateNew: handleCreateNew, onDuplicate: duplicateExam, onGenerateVariant: generateVariant, activeView: view };
         switch (view) {
             case 'editor':
-                return <Editor exam={currentExam} onSave={handleSaveExam} onCancel={handleCancelEditor} onPreview={handlePreview} bank={bank} addQuestionToBank={addQuestionToBank} allExamsForMeta={allExamsForMeta} showIndicator={(msg) => displayIndicator(msg, 'success')}/>;
+                return <Editor exam={currentExam} onSave={handleSaveExam} onCancel={handleCancelEditor} onPreview={(exam) => handlePreview(exam, 'editor')} bank={bank} addQuestionToBank={addQuestionToBank} allExamsForMeta={allExamsForMeta} showIndicator={(msg) => displayIndicator(msg, 'success')}/>;
             case 'preview':
                 if (!currentExam) return <Archive {...archiveProps} />; // Fallback
                 return (
                     <div className="bg-gray-200 py-10 print:bg-white">
-                        <div className="fixed top-16 left-0 right-0 bg-white shadow-md p-2 z-20 no-print flex justify-between items-center">
-                            <button onClick={() => setView('archive')} className="px-4 py-2 text-sm bg-gray-200 rounded-md hover:bg-gray-300">&larr; Kembali</button>
-                            <div className="flex items-center gap-2">
-                               <button onClick={() => setIsPreviewingKey(false)} className={`px-3 py-1 rounded-full text-xs ${!isPreviewingKey ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Soal</button>
-                               <button onClick={() => setIsPreviewingKey(true)} className={`px-3 py-1 rounded-full text-xs ${isPreviewingKey ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Kunci</button>
-                           </div>
-                           <div className="flex items-center gap-1">
-                                <button onClick={() => setZoom(z => Math.max(0.2, z - 0.1))} className="p-2 hover:bg-gray-100 rounded-full" title="Perkecil"><ZoomOutIcon className="w-5 h-5"/></button>
-                                <span className="w-12 text-center text-sm font-semibold">{(zoom * 100).toFixed(0)}%</span>
-                                <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="p-2 hover:bg-gray-100 rounded-full" title="Perbesar"><ZoomInIcon className="w-5 h-5"/></button>
-                            </div>
-                             <div className="relative" ref={exportMenuRef}>
-                                <button onClick={() => setExportMenuOpen(prev => !prev)} className="p-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
-                                    <ShareIcon className="w-5 h-5"/>
-                                </button>
-                                {isExportMenuOpen && (
-                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border">
-                                        <button onClick={handleExportHtml} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><FileCodeIcon className="w-4 h-4"/> Ekspor HTML</button>
-                                        <button onClick={handlePrint} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><PrintIcon className="w-4 h-4"/> Cetak / PDF</button>
+                        <div className="fixed top-16 left-0 right-0 bg-white shadow-md p-2 z-20 no-print flex justify-between items-center overflow-hidden">
+                            <button onClick={() => setView(previousView)} className="px-4 py-2 text-sm bg-gray-200 rounded-md hover:bg-gray-300 flex-shrink-0">&larr; Kembali</button>
+                            
+                            {/* Scrollable Command Area */}
+                            <div className="flex-1 min-w-0 overflow-x-auto flex justify-center">
+                                <div className="flex items-center gap-2 sm:gap-4 px-2 whitespace-nowrap">
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                        <button onClick={() => setIsPreviewingKey(false)} className={`px-3 py-1 rounded-full text-xs sm:text-sm ${!isPreviewingKey ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Lembar Soal</button>
+                                        <button onClick={() => setIsPreviewingKey(true)} className={`px-3 py-1 rounded-full text-xs sm:text-sm ${isPreviewingKey ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Kunci Jawaban</button>
                                     </div>
-                                )}
+                                    <div className="w-px h-6 bg-gray-300 hidden sm:block"></div>
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                        <button onClick={() => setZoom(z => Math.max(0.2, z - 0.1))} className="p-2 hover:bg-gray-100 rounded-full" title="Perkecil"><ZoomOutIcon className="w-5 h-5"/></button>
+                                        <span className="w-12 text-center text-sm font-semibold">{(zoom * 100).toFixed(0)}%</span>
+                                        <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="p-2 hover:bg-gray-100 rounded-full" title="Perbesar"><ZoomInIcon className="w-5 h-5"/></button>
+                                    </div>
+                                    <div className="w-px h-6 bg-gray-300 hidden sm:block"></div>
+                                    <button onClick={handleExportHtml} className="flex items-center gap-2 bg-teal-100 text-teal-800 px-3 py-2 rounded-md hover:bg-teal-200 text-xs sm:text-sm" title="Ekspor sebagai file HTML">
+                                        <FileCodeIcon className="w-4 h-4"/> <span className="hidden sm:inline">Ekspor HTML</span>
+                                    </button>
+                                    <button onClick={handlePrint} className="flex items-center gap-2 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 text-xs sm:text-sm">
+                                        <PrintIcon className="w-4 h-4"/> <span className="hidden sm:inline">Cetak / PDF</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

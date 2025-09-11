@@ -1,16 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import type { BankQuestion } from '../types';
 import { TrashIcon, EditIcon, TagIcon, SearchIcon } from './Icons';
+import { QuestionType } from '../types';
 
 const RawHtmlRenderer: React.FC<{ html: string; className?: string }> = ({ html, className }) => (
     <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
 );
 
-const QuestionTypeBadge: React.FC<{ type: string }> = ({ type }) => {
-    const typeMap: { [key: string]: { text: string; className: string } } = {
-        MULTIPLE_CHOICE: { text: 'Pilihan Ganda', className: 'bg-sky-100 text-sky-800' },
-        SHORT_ANSWER: { text: 'Isian Singkat', className: 'bg-lime-100 text-lime-800' },
-        ESSAY: { text: 'Uraian', className: 'bg-amber-100 text-amber-800' },
+const QuestionTypeBadge: React.FC<{ type: QuestionType }> = ({ type }) => {
+    const typeMap: { [key in QuestionType]?: { text: string; className: string } } = {
+        [QuestionType.MULTIPLE_CHOICE]: { text: 'Pilihan Ganda', className: 'bg-sky-100 text-sky-800' },
+        [QuestionType.MULTIPLE_CHOICE_COMPLEX]: { text: 'PG Kompleks', className: 'bg-cyan-100 text-cyan-800' },
+        [QuestionType.TRUE_FALSE]: { text: 'Benar/Salah', className: 'bg-rose-100 text-rose-800' },
+        [QuestionType.MATCHING]: { text: 'Menjodohkan', className: 'bg-violet-100 text-violet-800' },
+        [QuestionType.SHORT_ANSWER]: { text: 'Isian Singkat', className: 'bg-lime-100 text-lime-800' },
+        [QuestionType.ESSAY]: { text: 'Uraian', className: 'bg-amber-100 text-amber-800' },
     };
     const { text, className } = typeMap[type] || { text: 'Lainnya', className: 'bg-gray-100 text-gray-800' };
     return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${className}`}>{text}</span>;
@@ -35,7 +39,7 @@ export default function QuestionBank({ bank, deleteQuestionFromBank, updateQuest
             const gradeMatch = filterGrade ? q.grade === filterGrade : true;
             const termMatch = searchTerm ? 
                 (q.questionText.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                 q.tags.join(' ').toLowerCase().includes(searchTerm.toLowerCase()))
+                 (q.tags || []).join(' ').toLowerCase().includes(searchTerm.toLowerCase()))
                 : true;
             return subjectMatch && gradeMatch && termMatch;
         });
@@ -84,7 +88,7 @@ export default function QuestionBank({ bank, deleteQuestionFromBank, updateQuest
                                     <span className="text-gray-500">•</span>
                                     <span className="text-gray-600">{q.grade}</span>
                                 </div>
-                                {q.tags.length > 0 && 
+                                {(q.tags && q.tags.length > 0) && 
                                     <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                                         <TagIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
                                         {q.tags.map(tag => <span key={tag} className="text-xs bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded">{tag}</span>)}
@@ -92,7 +96,7 @@ export default function QuestionBank({ bank, deleteQuestionFromBank, updateQuest
                                 }
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                                <button onClick={() => setEditingQuestion(q)} className="p-2 text-gray-700 hover:text-green-700" title="Ubah Metadata"><EditIcon className="w-5 h-5" /></button>
+                                <button onClick={() => setEditingQuestion(JSON.parse(JSON.stringify(q)))} className="p-2 text-gray-700 hover:text-green-700" title="Ubah Metadata"><EditIcon className="w-5 h-5" /></button>
                                 <button onClick={() => deleteQuestionFromBank(q.id)} className="p-2 text-gray-700 hover:text-red-700" title="Hapus dari Bank"><TrashIcon className="w-5 h-5" /></button>
                             </div>
                         </div>
@@ -102,7 +106,7 @@ export default function QuestionBank({ bank, deleteQuestionFromBank, updateQuest
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <input type="text" value={editingQuestion.subject} onChange={e => setEditingQuestion({...editingQuestion, subject: e.target.value})} placeholder="Mata Pelajaran" className="p-2 border rounded-md bg-white w-full"/>
                                     <input type="text" value={editingQuestion.grade} onChange={e => setEditingQuestion({...editingQuestion, grade: e.target.value})} placeholder="Kelas/Jenjang" className="p-2 border rounded-md bg-white w-full"/>
-                                    <input type="text" value={editingQuestion.tags.join(', ')} onChange={e => setEditingQuestion({...editingQuestion, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)})} placeholder="Tags (pisahkan koma)" className="p-2 border rounded-md bg-white w-full"/>
+                                    <input type="text" value={(editingQuestion.tags || []).join(', ')} onChange={e => setEditingQuestion({...editingQuestion, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)})} placeholder="Tags (pisahkan koma)" className="p-2 border rounded-md bg-white w-full"/>
                                 </div>
                                 <div className="flex justify-end gap-2 mt-3">
                                     <button onClick={() => setEditingQuestion(null)} className="px-3 py-1 text-sm bg-gray-200 rounded-md hover:bg-gray-300">Batal</button>

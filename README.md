@@ -18,7 +18,7 @@ SoalGenius dilengkapi dengan serangkaian fitur canggih untuk menyederhanakan alu
 
 ### 1. Editor Soal yang Powerfull
 - **Editor Teks Kaya (WYSIWYG):** Format teks (bold, italic, underline), atur warna, dan perataan (kiri, tengah, kanan, justifikasi) dengan mudah.
-- **Beragam Tipe Soal:** Tambahkan soal **Pilihan Ganda**, **Isian Singkat**, dan **Uraian** dalam satu dokumen ujian.
+- **Beragam Tipe Soal:** Tambahkan soal **Pilihan Ganda**, **Pilihan Ganda Kompleks**, **Benar-Salah**, **Menjodohkan**, **Isian Singkat**, dan **Uraian** dalam satu dokumen ujian.
 - **Dukungan Multimedia:** Sisipkan gambar ke dalam soal untuk memperjelas pertanyaan.
 - **Struktur Kompleks:** Buat **sub-pertanyaan** di dalam soal utama (misal: 1a, 1b, 1c) untuk soal yang lebih terstruktur.
 - **Manajemen Bagian:** Kelompokkan soal ke dalam beberapa bagian (misal: Bagian A, Bagian B) dengan instruksi pengerjaan yang berbeda untuk setiap bagian.

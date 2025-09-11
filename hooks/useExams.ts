@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Exam, Section, ExamStatus, Question, Option } from '../types';
+import { QuestionType } from '../types';
 
 const STORAGE_KEY = 'soalgenius-exams';
 
@@ -43,16 +44,9 @@ export function useExams() {
         .map((exam: any) => {
             let tempExam = { ...exam };
 
-            // 0. Add status if missing
-            if (!tempExam.status) {
-                tempExam.status = 'draft';
-            }
-            
-            if (!tempExam.description) {
-                tempExam.description = '';
-            }
+            if (!tempExam.status) tempExam.status = 'draft';
+            if (!tempExam.description) tempExam.description = '';
 
-            // 1. Migrate legacy exams with questions at root level to sections
             if (tempExam.questions && !tempExam.sections) {
                 const newSection: Section = {
                     id: crypto.randomUUID(),
@@ -64,20 +58,16 @@ export function useExams() {
                 tempExam = { ...tempExam, sections: [newSection] };
             }
 
-            // 2. Migrate questions within sections to have new fields for numbering and rich text
             if (tempExam.sections) {
                 tempExam.sections = tempExam.sections.map((section: any) => {
                     section.instruction = migrateTextToHtml(section.instruction);
                     if (section.questions) {
                         section.questions = section.questions.map((q: any, index: number) => {
-                            // FIX: Removed duplicate `answerKey` and `subQuestions` properties from this object literal.
-                            // They were defined twice, causing an error. The definitions that perform HTML migration are kept.
-                            const migratedQuestion = {
+                            const migratedQuestion: any = {
                                 ...q,
                                 questionNumber: q.questionNumber || (index + 1).toString(),
                                 image: q.image || null,
                                 includeAnswerSpace: q.includeAnswerSpace ?? false,
-                                // --- Rich text migration ---
                                 questionText: migrateTextToHtml(q.questionText),
                                 answerKey: migrateTextToHtml(q.answerKey),
                                 options: (q.options || []).map((opt: any, optIndex: number) => ({
@@ -89,7 +79,19 @@ export function useExams() {
                                     ...subQ,
                                     text: migrateTextToHtml(subQ.text),
                                 })),
+                                // --- New fields migration from v1.0 ---
+                                correctAnswerIds: q.correctAnswerId ? [q.correctAnswerId] : (q.correctAnswerIds || []),
+                                trueFalseAnswer: q.trueFalseAnswer || null,
+                                matchingPremises: q.matchingPremises || [],
+                                matchingResponses: q.matchingResponses || [],
+                                answerKeyMatching: q.answerKeyMatching || [],
                             };
+                            
+                            // Remove the old single-answer key if it exists
+                            if ('correctAnswerId' in migratedQuestion) {
+                                delete migratedQuestion.correctAnswerId;
+                            }
+                            
                             return migratedQuestion;
                         });
                     }
@@ -140,7 +142,6 @@ export function useExams() {
     const examToDuplicate = exams.find(exam => exam.id === examId);
     if (!examToDuplicate) return;
 
-    // Deep copy to avoid reference issues
     const newExam = JSON.parse(JSON.stringify(examToDuplicate));
 
     newExam.id = crypto.randomUUID();
@@ -164,8 +165,11 @@ export function useExams() {
         const newQuestions = shuffleArray(section.questions).map((q: Question, index) => {
             const newQ = {...q};
             newQ.questionNumber = (index + 1).toString();
-            if (newQ.type === 'MULTIPLE_CHOICE') {
+            if (newQ.type === QuestionType.MULTIPLE_CHOICE || newQ.type === QuestionType.MULTIPLE_CHOICE_COMPLEX) {
                 newQ.options = shuffleArray(newQ.options);
+            }
+             if (newQ.type === QuestionType.MATCHING && newQ.matchingResponses) {
+                newQ.matchingResponses = shuffleArray(newQ.matchingResponses);
             }
             return newQ;
         });
@@ -203,14 +207,12 @@ export function useExams() {
         const parsedExams = JSON.parse(result);
         if (!Array.isArray(parsedExams)) throw new Error("Backup file is not an array");
 
-        const restoredExams: Exam[] = parsedExams.map((exam: any) => ({
-            ...exam,
-            status: exam.status || 'draft',
-        }));
+        // Basic validation for exam structure
+        const isValid = parsedExams.every(e => e.id && e.title && Array.isArray(e.sections));
 
-        if (restoredExams.every(e => e.id && e.title && e.sections)) {
+        if (isValid) {
            if(window.confirm('Data saat ini akan diganti dengan data dari file backup. Lanjutkan?')) {
-                setExams(restoredExams);
+                setExams(parsedExams); // Assume restored data is already in the correct new format
                 onSuccess();
            }
         } else {

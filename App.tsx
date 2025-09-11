@@ -8,6 +8,7 @@ import Modal from './components/Modal';
 import WelcomeModal from './components/WelcomeModal'; // Import WelcomeModal
 import QuestionBank from './components/QuestionBank';
 import Settings from './components/Settings';
+import { QuestionType } from './types';
 // FIX: Imported DragHandleIcon to resolve reference error.
 import { SettingsIcon, DownloadIcon, UploadIcon, LogoIcon, PlusIcon, TrashIcon, ZoomInIcon, ZoomOutIcon, FileCodeIcon, PrintIcon, ArchiveIcon, InfoIcon, HeartIcon, MessageSquareIcon, GithubIcon, BookmarkIcon, CheckCircleIcon, WandIcon, CoffeeIcon, DragHandleIcon, EditorIcon, BankIcon } from './components/Icons';
 
@@ -168,7 +169,7 @@ const PdfPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ exam, 
                                                 </div>
                                             )}
 
-                                            {q.type === 'MULTIPLE_CHOICE' && (
+                                            {(q.type === QuestionType.MULTIPLE_CHOICE || q.type === QuestionType.MULTIPLE_CHOICE_COMPLEX) && (
                                                 <div className="grid grid-cols-2 gap-x-8 gap-y-1">
                                                     {q.options.map((opt) => (
                                                         <div key={opt.id} className="flex items-baseline">
@@ -176,6 +177,26 @@ const PdfPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ exam, 
                                                             <RawHtmlRenderer html={opt.text} className="break-words flex-1 min-w-0 ml-2" />
                                                         </div>
                                                     ))}
+                                                </div>
+                                            )}
+                                            {q.type === QuestionType.MATCHING && (
+                                                <div className="mt-2 flex gap-8">
+                                                    <div className="flex-1 space-y-2">
+                                                        {q.matchingPremises?.map((premise, index) => (
+                                                            <div key={premise.id} className="flex items-start">
+                                                                <span className="mr-2">{index + 1}.</span>
+                                                                <RawHtmlRenderer html={premise.text} className="flex-1 break-words" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="flex-1 space-y-2">
+                                                         {q.matchingResponses?.map((response, index) => (
+                                                            <div key={response.id} className="flex items-start">
+                                                                <span className="mr-2">{String.fromCharCode(65 + index)}.</span>
+                                                                <RawHtmlRenderer html={response.text} className="flex-1 break-words" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             )}
                                             {q.type === 'ESSAY' && q.includeAnswerSpace && (
@@ -229,10 +250,31 @@ const AnswerKeyPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ 
                                 <React.Fragment key={q.id}>
                                     <div className="font-bold text-right">{q.questionNumber}.</div>
                                     <div>
-                                        {q.type === 'MULTIPLE_CHOICE' && (
-                                            q.options.find(o => o.id === q.correctAnswerId)?.label?.toUpperCase() || <span className="text-red-600 italic">Belum diatur</span>
+                                        {q.type === QuestionType.MULTIPLE_CHOICE && (
+                                            q.options.find(o => o.id === q.correctAnswerIds?.[0])?.label?.toUpperCase() || <span className="text-red-600 italic">Belum diatur</span>
                                         )}
-                                        {(q.type === 'ESSAY' || q.type === 'SHORT_ANSWER') && (
+                                        {q.type === QuestionType.MULTIPLE_CHOICE_COMPLEX && (
+                                            (q.correctAnswerIds && q.correctAnswerIds.length > 0) ?
+                                            q.options
+                                                .filter(o => q.correctAnswerIds?.includes(o.id))
+                                                .map(o => o.label.toUpperCase())
+                                                .join(', ')
+                                            : <span className="text-red-600 italic">Belum diatur</span>
+                                        )}
+                                        {q.type === QuestionType.TRUE_FALSE && (
+                                            q.trueFalseAnswer ? (q.trueFalseAnswer === 'true' ? 'Benar' : 'Salah') : <span className="text-red-600 italic">Belum diatur</span>
+                                        )}
+                                        {q.type === QuestionType.MATCHING && (
+                                            (q.answerKeyMatching && q.answerKeyMatching.length > 0) ?
+                                            q.answerKeyMatching.map(pair => {
+                                                const premiseIndex = q.matchingPremises?.findIndex(p => p.id === pair.premiseId);
+                                                const responseIndex = q.matchingResponses?.findIndex(r => r.id === pair.responseId);
+                                                if (premiseIndex === -1 || responseIndex === -1) return null;
+                                                return `${premiseIndex + 1}-${String.fromCharCode(65 + responseIndex)}`;
+                                            }).filter(Boolean).join(', ')
+                                            : <span className="text-red-600 italic">Belum diatur</span>
+                                        )}
+                                        {(q.type === QuestionType.ESSAY || q.type === QuestionType.SHORT_ANSWER) && (
                                             <RawHtmlRenderer html={q.answerKey || '-'} />
                                         )}
                                     </div>
@@ -261,7 +303,7 @@ function App() {
     const defaultHeaderSettings: HeaderSettings = {
         showHeader: true,
         showLogo: true,
-        logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGESURBVHhe7dixTsNQEATgd98SAvw/w0sDVAQSNeFjQsU6My3Zdfep9e+NnWmvvfa2U255/1dO5wSAQkAAKCAACAgABAACCgEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIDcde+1t1/tA2dIeT5gdiueAAAAAElFTkSuQmCC', // Default placeholder
+        logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGESURBVHhe7dixTsNQEATgd98SAvw/w0sDVAQSNeFjQsU6My3Zdfep9e+NnWmvvfa2U255/1dO5wSAQkAAKCAACAgABAACCgEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIDcde+1t1/tA2dIeT5gdiueAAAAAElFTkSuQmCC', // Default placeholder
         headerLines: [
             { id: '1', text: 'PEMERINTAH KOTA CONTOH' },
             { id: '2', text: 'DINAS PENDIDIKAN DAN KEBUDAYAAN' },
@@ -631,7 +673,7 @@ function App() {
             <Modal isOpen={isInfoModalOpen} onClose={() => setInfoModalOpen(false)} title="Tentang & Panduan SoalGenius" size="3xl">
                 <div className="space-y-6 text-gray-700 text-sm">
                     <div className="text-center bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                        <h3 className="text-xl font-bold text-blue-800 mb-2">Selamat Datang di SoalGenius! v1.0</h3>
+                        <h3 className="text-xl font-bold text-blue-800 mb-2">Selamat Datang di SoalGenius! v1.1</h3>
                         <p className="max-w-2xl mx-auto">
                             Aplikasi ini dirancang untuk membantu para pendidik membuat, mengelola, dan mencetak soal ujian dengan lebih mudah dan terstruktur. Setelah dimuat pertama kali, aplikasi dapat dijalankan sepenuhnya <strong>offline</strong> tanpa koneksi internet. Semua data Anda disimpan dengan aman langsung di browser.
                         </p>
@@ -654,7 +696,7 @@ function App() {
                              <ul className="list-disc list-outside space-y-1">
                                 <li><strong>Bagian Soal:</strong> Ujian dapat dibagi menjadi beberapa bagian (misal: A. Pilihan Ganda, B. Esai). Gunakan tombol <strong>"Tambah Bagian Soal Baru"</strong> untuk memisahkan tipe soal. Anda bisa mengubah judul bagian (misal: dari "I" menjadi "A").</li>
                                 <li><strong>Editor Teks:</strong> Gunakan toolbar di atas setiap kotak teks untuk format <strong>bold</strong>, <i>italic</i>, <u>underline</u>, warna, dan perataan teks.</li>
-                                <li><strong>Menambah Soal:</strong> Di bawah setiap bagian, klik tombol jenis soal yang diinginkan (Pilihan Ganda, Isian Singkat, Uraian).</li>
+                                <li><strong>Menambah Soal:</strong> Di bawah setiap bagian, klik tombol jenis soal yang diinginkan (Pilihan Ganda, Isian Singkat, Uraian, dll).</li>
                                 <li><strong>Fitur Soal:</strong> Anda dapat menambahkan gambar, membuat sub-pertanyaan, mengatur kunci jawaban, dan menyertakan ruang jawaban kosong.</li>
                                 <li><strong>Menyusun Ulang:</strong> Tahan dan seret ikon titik-titik ( <DragHandleIcon className="w-4 h-4 inline-block -mt-1"/> ) di samping soal atau bagian untuk mengubah urutannya.</li>
                             </ul>
