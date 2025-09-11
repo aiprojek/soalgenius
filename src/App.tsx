@@ -5,7 +5,7 @@ import { useQuestionBank } from './hooks/useQuestionBank';
 import Archive from './components/Archive';
 import Editor from './components/Editor';
 import Modal from './components/Modal';
-import WelcomeModal from './components/WelcomeModal';
+import WelcomeModal from './components/WelcomeModal'; // Import WelcomeModal
 import QuestionBank from './components/QuestionBank';
 import Settings from './components/Settings';
 import { QuestionType } from './types';
@@ -46,10 +46,28 @@ const AutoFitText: React.FC<{ text: string; className?: string }> = ({ text, cla
         fitText();
     }, [text, fitText]);
 
-    useEffect(() => {
-        const handleResize = () => requestAnimationFrame(fitText);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+    useLayoutEffect(() => {
+        const parent = textRef.current?.parentElement;
+        if (!parent) return;
+
+        let animationFrameId: number | null = null;
+
+        const handleResize = () => {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            animationFrameId = requestAnimationFrame(fitText);
+        };
+
+        const observer = new ResizeObserver(handleResize);
+        observer.observe(parent);
+
+        return () => {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            observer.disconnect();
+        };
     }, [fitText]);
 
     return (
@@ -93,15 +111,22 @@ const PdfPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ exam, 
                 <div className="my-4 w-full flex items-stretch gap-4">
                     <div className="flex-1">
                         <div className="grid grid-cols-[auto_auto_1fr] items-baseline gap-x-2 gap-y-1">
+                            {/* Row 1: Nama */}
                             <div className="font-semibold">Nama</div>
                             <div>:</div>
                             <div className="overflow-hidden whitespace-nowrap leading-tight">..................................................</div>
+
+                            {/* Row 2: Mapel */}
                             <div className="font-semibold whitespace-nowrap">Mata Pelajaran</div>
                             <div>:</div>
                             <div className="break-words">{exam.subject}</div>
+
+                            {/* Row 3: Kelas */}
                             <div className="font-semibold whitespace-nowrap">Kelas/Jenjang</div>
                             <div>:</div>
                             <div className="break-words">{exam.grade}</div>
+
+                            {/* Row 4: Waktu */}
                             <div className="font-semibold">Waktu</div>
                             <div>:</div>
                             <div>{exam.time} Menit</div>
@@ -144,7 +169,7 @@ const PdfPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ exam, 
                                             )}
 
                                             {(q.type === QuestionType.MULTIPLE_CHOICE || q.type === QuestionType.MULTIPLE_CHOICE_COMPLEX) && (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
+                                                <div className="grid grid-cols-2 gap-x-8 gap-y-1">
                                                     {q.options.map((opt) => (
                                                         <div key={opt.id} className="flex items-baseline">
                                                             <span className="flex-shrink-0">{opt.label}.</span>
@@ -154,7 +179,7 @@ const PdfPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ exam, 
                                                 </div>
                                             )}
                                             {q.type === QuestionType.MATCHING && (
-                                                <div className="mt-2 flex flex-col sm:flex-row gap-4 sm:gap-8">
+                                                <div className="mt-2 flex gap-8">
                                                     <div className="flex-1 space-y-2">
                                                         {q.matchingPremises?.map((premise, index) => (
                                                             <div key={premise.id} className="flex items-start">
@@ -271,6 +296,7 @@ function App() {
     const [isInfoModalOpen, setInfoModalOpen] = useState(false);
     const [isWelcomeModalOpen, setWelcomeModalOpen] = useState(false);
     const [zoom, setZoom] = useState(1);
+    const [previewSource, setPreviewSource] = useState<View>('archive');
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
     const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -303,13 +329,14 @@ function App() {
         localStorage.setItem('soalgenius-header-settings', JSON.stringify(headerSettings));
     }, [headerSettings]);
 
+    // Check if the welcome modal should be shown
     useEffect(() => {
         const hasBeenWelcomed = localStorage.getItem('soalgenius-welcomed');
         if (!hasBeenWelcomed) {
             setWelcomeModalOpen(true);
         }
     }, []);
-
+    
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
@@ -319,25 +346,6 @@ function App() {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-
-    const previewContentRef = useRef<HTMLDivElement>(null);
-
-    useLayoutEffect(() => {
-        const content = previewContentRef.current;
-        if (view === 'preview' && content) {
-            if (window.innerWidth < 768) {
-                const parent = content.parentElement;
-                if (parent) {
-                    const contentWidth = content.getBoundingClientRect().width / zoom;
-                    const newZoom = parent.clientWidth / contentWidth;
-                    setZoom(newZoom);
-                }
-            } else {
-                setZoom(1);
-            }
-        }
-    }, [view, currentExam, isPreviewingKey]);
-
 
     const { 
         exams, addExam, updateExam, deleteExam, duplicateExam, 
@@ -362,17 +370,29 @@ function App() {
     };
     
     const handleSaveExam = (examToSave: Exam | Omit<Exam, 'id' | 'createdAt'>) => {
-        if ('id' in examToSave && examToSave.id) {
-            updateExam(examToSave);
+        if ('id' in examToSave && examToSave.id && exams.some(e => e.id === examToSave.id)) {
+            updateExam(examToSave as Exam);
         } else {
-            addExam(examToSave as Omit<Exam, 'id' | 'createdAt'>);
+            const { id, createdAt, ...newExamData } = examToSave as Exam; 
+            addExam(newExamData);
         }
         setView('archive');
         displayIndicator('Ujian berhasil disimpan!', 'success');
     };
 
-    const handlePreview = (exam: Exam | Omit<Exam, 'id' | 'createdAt'>) => {
-        const fullExam: Exam = 'id' in exam ? exam : { ...exam, id: 'preview-id', createdAt: new Date().toISOString() };
+    const handlePreviewFromArchive = (exam: Exam) => {
+        setPreviewSource('archive');
+        setCurrentExam(exam);
+        setView('preview');
+        setIsPreviewingKey(false);
+        setZoom(1);
+    };
+
+    const handlePreviewFromEditor = (exam: Exam | Omit<Exam, 'id' | 'createdAt'>) => {
+        setPreviewSource('editor');
+        const fullExam: Exam = 'id' in exam && exam.id 
+            ? exam as Exam
+            : { ...exam, id: `preview-${crypto.randomUUID()}`, createdAt: new Date().toISOString() };
         setCurrentExam(fullExam);
         setView('preview');
         setIsPreviewingKey(false);
@@ -434,11 +454,17 @@ function App() {
         printWindow.document.write('</body></html>');
         printWindow.document.close();
         
-        printWindow.onload = () => {
+        const tryPrint = () => {
              printWindow.focus();
              printWindow.print();
              printWindow.close();
         };
+
+        if (printWindow.document.readyState === 'complete') {
+            tryPrint();
+        } else {
+            printWindow.onload = tryPrint;
+        }
     };
 
     const handleExportHtml = () => {
@@ -448,17 +474,10 @@ function App() {
             return;
         }
     
-        const allStyles = Array.from(document.styleSheets)
-          .map(styleSheet => {
-            try {
-              return Array.from(styleSheet.cssRules)
-                .map(rule => rule.cssText)
-                .join('');
-            } catch (e) {
-              return '';
-            }
-          })
-          .join('');
+        // Capture all styles from the document's head, including Tailwind's.
+        const allStyles = Array.from(document.querySelectorAll('style'))
+            .map(style => style.innerHTML)
+            .join('\n');
     
         const contentClone = previewElement.cloneNode(true) as HTMLElement;
         contentClone.style.transform = '';
@@ -468,18 +487,63 @@ function App() {
         const title = `${isPreviewingKey ? 'Kunci Jawaban' : 'Lembar Soal'} - ${currentExam.title}`;
         
         const htmlString = `
-            <!DOCTYPE html><html lang="id"><head><meta charset="UTF-8" /><title>${title}</title><style>${allStyles}</style></head>
-            <body class="bg-gray-200 p-8">${contentClone.innerHTML}</body></html>`;
+            <!DOCTYPE html>
+            <html lang="id">
+            <head>
+                <meta charset="UTF-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <title>${title}</title>
+                <style>
+                    ${allStyles}
+
+                    /* Add specific styles for the exported body and printing */
+                    body {
+                        font-family: "Liberation Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                        background-color: #e5e7eb; /* Tailwind gray-200 */
+                        padding: 2.5rem 0; /* Tailwind py-10 */
+                    }
+                    @media print {
+                        body {
+                            background-color: white;
+                            padding: 0;
+                        }
+                        .shadow-lg {
+                            box-shadow: none !important;
+                        }
+                    }
+                </style>
+            </head>
+            <body class="flex justify-center">
+                ${contentClone.innerHTML}
+            </body>
+            </html>
+        `;
     
-        const blob = new Blob([htmlString.trim()], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const safeTitle = currentExam.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        a.href = url;
-        a.download = `${isPreviewingKey ? 'kunci' : 'soal'}_${safeTitle}.html`;
-        a.click();
-        URL.revokeObjectURL(url);
-        displayIndicator('Berhasil diekspor sebagai HTML!', 'success');
+        try {
+            const blob = new Blob([htmlString.trim()], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+    
+            const safeTitle = currentExam.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const safeSubject = currentExam.subject.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'mapel';
+            const safeGrade = currentExam.grade.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'kelas';
+
+            const now = new Date();
+            const timestamp = `${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+    
+            const fileName = `${isPreviewingKey ? 'kunci' : 'soal'}_${safeSubject}_${safeGrade}_${safeTitle}_${timestamp}.html`;
+
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            displayIndicator('Berhasil diekspor sebagai HTML!', 'success');
+        } catch (error) {
+            console.error("HTML export failed:", error);
+            displayIndicator('Gagal mengekspor HTML.', 'error');
+        }
     };
 
     const renderView = () => {
@@ -487,7 +551,7 @@ function App() {
             exams, 
             onEdit: handleEdit, 
             onDelete: deleteExam, 
-            onPreview: handlePreview,
+            onPreview: handlePreviewFromArchive,
             onCreateNew: handleCreateNew,
             onDuplicate: duplicateExam,
             onGenerateVariant: generateVariant,
@@ -498,7 +562,7 @@ function App() {
                             exam={currentExam} 
                             onSave={handleSaveExam} 
                             onCancel={handleCancelEditor}
-                            onPreview={handlePreview}
+                            onPreview={handlePreviewFromEditor}
                             bank={bank}
                             addQuestionToBank={addQuestionToBank}
                             allExamsForMeta={allExamsForMeta}
@@ -507,42 +571,35 @@ function App() {
             case 'preview':
                 if (!currentExam) return <Archive {...archiveProps} />; // Fallback
                 return (
-                    <div className="bg-gray-200 print:bg-white min-h-screen">
-                        <div className="fixed top-16 left-0 right-0 bg-white shadow-md p-2 z-20 no-print flex items-center overflow-x-auto">
-                            <div className="flex items-center gap-2 flex-nowrap min-w-max mx-auto px-2">
-                                <button onClick={() => setView('archive')} className="px-3 py-1 text-sm bg-gray-200 rounded-md hover:bg-gray-300 flex-shrink-0">&larr; Kembali</button>
-                                <div className="w-px h-6 bg-gray-300 mx-2"></div>
-                               <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
-                                   <button onClick={() => setIsPreviewingKey(false)} className={`px-3 py-1 rounded-full text-sm ${!isPreviewingKey ? 'bg-blue-600 text-white shadow' : 'text-gray-600'}`}>Soal</button>
-                                   <button onClick={() => setIsPreviewingKey(true)} className={`px-3 py-1 rounded-full text-sm ${isPreviewingKey ? 'bg-blue-600 text-white shadow' : 'text-gray-600'}`}>Kunci</button>
+                    <div className="bg-gray-200 py-10 print:bg-white">
+                        <div className="fixed top-16 left-0 right-0 bg-white shadow-md p-3 z-20 no-print flex justify-between items-center">
+                            <button onClick={() => setView(previewSource)} className="px-4 py-2 text-sm bg-gray-200 rounded-md hover:bg-gray-300">&larr; Kembali ke {previewSource === 'editor' ? 'Editor' : 'Arsip'}</button>
+                            <div className="flex items-center gap-4">
+                               <div className="flex items-center gap-2">
+                                   <button onClick={() => setIsPreviewingKey(false)} className={`px-3 py-1 rounded-full text-sm ${!isPreviewingKey ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Lembar Soal</button>
+                                   <button onClick={() => setIsPreviewingKey(true)} className={`px-3 py-1 rounded-full text-sm ${isPreviewingKey ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Kunci Jawaban</button>
                                </div>
-                               <div className="w-px h-6 bg-gray-300 mx-2"></div>
-                               <div className="flex items-center gap-1">
-                                    <button onClick={() => setZoom(z => Math.max(0.2, z - 0.1))} className="p-2 hover:bg-gray-100 rounded-full" title="Perkecil"><ZoomOutIcon className="w-5 h-5"/></button>
+                               <div className="w-px h-6 bg-gray-300"></div>
+                               <div className="flex items-center gap-2">
+                                    <button onClick={() => setZoom(z => Math.max(0.5, z - 0.1))} className="p-2 hover:bg-gray-100 rounded-full" title="Perkecil"><ZoomOutIcon className="w-5 h-5"/></button>
                                     <span className="w-12 text-center text-sm font-semibold">{(zoom * 100).toFixed(0)}%</span>
-                                    <button onClick={() => setZoom(z => Math.min(3, z + 0.1))} className="p-2 hover:bg-gray-100 rounded-full" title="Perbesar"><ZoomInIcon className="w-5 h-5"/></button>
+                                    <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="p-2 hover:bg-gray-100 rounded-full" title="Perbesar"><ZoomInIcon className="w-5 h-5"/></button>
                                 </div>
-                                 <div className="w-px h-6 bg-gray-300 mx-2"></div>
-                                <button onClick={handleExportHtml} className="flex items-center gap-2 bg-teal-100 text-teal-800 px-3 py-1.5 rounded-md hover:bg-teal-200 text-sm" title="Ekspor sebagai file HTML mandiri">
-                                    <FileCodeIcon className="w-4 h-4"/> Ekspor
+                                 <div className="w-px h-6 bg-gray-300"></div>
+                                <button onClick={handleExportHtml} className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700" title="Ekspor sebagai file HTML mandiri">
+                                    <FileCodeIcon className="w-5 h-5"/> Ekspor HTML
                                 </button>
-                                <button onClick={handlePrint} className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 text-sm">
-                                    <PrintIcon className="w-4 h-4"/> Cetak
+                                <button onClick={handlePrint} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                                    <PrintIcon className="w-5 h-5"/> Cetak
                                 </button>
                             </div>
                         </div>
 
-                        <div id="pdf-preview-container" className="pt-16 pb-8 overflow-x-auto">
-                             <div 
+                        <div id="pdf-preview-container" className="overflow-x-auto pb-8">
+                            <div 
                                 id="pdf-preview-content" 
-                                ref={previewContentRef}
-                                className="mx-auto"
-                                style={{ 
-                                    transform: `scale(${zoom})`, 
-                                    transformOrigin: 'top center', 
-                                    transition: 'transform 0.2s',
-                                    paddingTop: `${zoom * 20}px` // Add dynamic padding to center it vertically a bit
-                                }}
+                                className="flex flex-col items-center gap-8 pt-20 print:pt-0 mx-auto"
+                                style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}
                             >
                                 {isPreviewingKey ? 
                                     <AnswerKeyPreview exam={currentExam} settings={headerSettings} /> :
@@ -584,14 +641,11 @@ function App() {
             </div>
         </div>
     );
-    
+
     const mainContentPadding = useMemo(() => {
         let padding = 'py-4 sm:py-8';
         if (view === 'editor' || view === 'archive' || view === 'bank') {
             padding += ' pb-24 md:pb-8';
-        }
-        if (view === 'preview') {
-            return 'p-0';
         }
         return padding;
     }, [view]);
@@ -604,7 +658,7 @@ function App() {
                         <LogoIcon className="w-8 h-8" />
                         <h1 className="text-xl font-bold text-gray-800">SoalGenius</h1>
                     </div>
-                     <div className="hidden md:flex items-center gap-4">
+                     <div className="hidden md:flex items-center gap-4 ml-8">
                         <button onClick={() => setView('archive')} className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md ${(view === 'archive' || view === 'editor' || view === 'preview') ? 'text-blue-700 bg-blue-100' : 'text-gray-600 hover:bg-gray-100'}`}>
                             <EditorIcon className="w-4 h-4" />
                             Editor Ujian
@@ -614,14 +668,14 @@ function App() {
                             Bank Soal
                         </button>
                     </div>
-                    <div className="hidden md:flex items-center gap-1">
+                    <div className="hidden md:flex items-center gap-3">
                          <input type="file" ref={uploadInputRef} className="hidden" accept=".json" onChange={(e) => e.target.files && handleRestoreData(e.target.files[0])} />
                          <button onClick={handleTriggerUpload} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Pulihkan Data"><UploadIcon className="w-5 h-5"/></button>
                          <button onClick={backupData} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Cadangkan Data"><DownloadIcon className="w-5 h-5"/></button>
                          <button onClick={() => setView('settings')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Pengaturan"><SettingsIcon className="w-5 h-5"/></button>
                          <button onClick={() => setInfoModalOpen(true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Tentang Aplikasi"><InfoIcon className="w-5 h-5"/></button>
                     </div>
-                    <div className="md:hidden relative" ref={mobileMenuRef}>
+                     <div className="md:hidden relative" ref={mobileMenuRef}>
                          <button onClick={() => setMobileMenuOpen(p => !p)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" aria-label="Buka menu">
                             <MenuIcon className="w-6 h-6" />
                          </button>
@@ -638,17 +692,11 @@ function App() {
                 </nav>
             </header>
             
-            <main className={`max-w-7xl mx-auto sm:px-6 lg:px-8 ${mainContentPadding}`}>
+            <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${mainContentPadding}`}>
                 {renderView()}
             </main>
-
-            {view === 'archive' && (
-                <button onClick={handleCreateNew} className="md:hidden fixed bottom-20 right-4 bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center" aria-label="Buat Ujian Baru">
-                    <PlusIcon className="w-8 h-8" />
-                </button>
-            )}
-
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_5px_rgba(0,0,0,0.1)] h-16 flex justify-around items-center z-30 no-print">
+            
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_5px_rgba(0,0,0,0.1)] h-16 flex justify-around items-center z-10 no-print">
                 <button onClick={() => setView('archive')} className={`flex flex-col items-center gap-1 text-xs px-2 py-1 rounded-md ${(view === 'archive' || view === 'editor' || view === 'preview') ? 'text-blue-700' : 'text-gray-600'}`}>
                     <EditorIcon className="w-6 h-6" />
                     <span>Editor Ujian</span>
@@ -659,12 +707,12 @@ function App() {
                 </button>
             </nav>
 
-            <footer className="text-center py-4 text-sm text-gray-500 no-print hidden md:block">
+            <footer className="text-center py-4 text-sm text-gray-500 no-print">
                  <p>&copy; {new Date().getFullYear()} Soal Genius. Dibuat dengan <HeartIcon className="w-4 h-4 inline text-red-500"/> untuk para pendidik.</p>
             </footer>
 
             {showIndicator && (
-                <div className={`fixed bottom-20 md:bottom-5 right-5 px-4 py-2 rounded-lg shadow-lg text-white ${showIndicator.type === 'success' ? 'bg-green-500' : 'bg-red-500'} animate-fade-in-out`}>
+                <div className={`fixed bottom-5 right-5 px-4 py-2 rounded-lg shadow-lg text-white ${showIndicator.type === 'success' ? 'bg-green-500' : 'bg-red-500'} animate-fade-in-out`}>
                     <div className="flex items-center gap-2">
                         <CheckCircleIcon className="w-5 h-5" />
                         <span>{showIndicator.message}</span>
@@ -685,7 +733,7 @@ function App() {
                         <p className="max-w-2xl mx-auto">
                             Aplikasi ini dirancang untuk membantu para pendidik membuat, mengelola, dan mencetak soal ujian dengan lebih mudah dan terstruktur. Setelah dimuat pertama kali, aplikasi dapat dijalankan sepenuhnya <strong>offline</strong> tanpa koneksi internet. Semua data Anda disimpan dengan aman langsung di browser.
                         </p>
-                         <div className="mt-4 text-xs text-gray-600 border-t pt-3 flex flex-col sm:flex-row justify-center gap-2 sm:gap-4">
+                         <div className="mt-4 text-xs text-gray-600 border-t pt-3 flex justify-center gap-4">
                             <span><strong>Pengembang:</strong> <a href="https://aiprojek01.my.id" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">AI Projek</a></span>
                             <span><strong>Lisensi:</strong> <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">GNU GPLv3</a></span>
                         </div>
@@ -694,28 +742,41 @@ function App() {
                     <div className="space-y-4">
                         <GuideSection title="1. Memulai Ujian Baru" icon={<PlusIcon className="w-5 h-5 text-blue-600" />}>
                             <ul className="list-disc list-outside space-y-1">
-                                <li>Dari halaman utama (Arsip), klik tombol <strong>+ (plus)</strong> di pojok kanan bawah (di HP) atau tombol <strong>"Buat Ujian Baru"</strong> di pojok kanan atas (di desktop).</li>
+                                <li>Dari halaman utama (Arsip), klik tombol <strong>"Buat Ujian Baru"</strong>.</li>
                                 <li>Isi informasi dasar ujian seperti <strong>Judul, Mata Pelajaran, Kelas,</strong> dan <strong>Waktu</strong> pengerjaan.</li>
+                                <li>Anda bisa menambahkan <strong>deskripsi</strong> internal (tidak akan dicetak) sebagai catatan.</li>
                             </ul>
                         </GuideSection>
                         
                         <GuideSection title="2. Editor Soal" icon={<EditorIcon className="w-5 h-5 text-blue-600" />}>
                              <ul className="list-disc list-outside space-y-1">
-                                <li><strong>Navigasi Mobile:</strong> Gunakan <strong>navigasi bawah</strong> untuk berpindah antara 'Editor Ujian' dan 'Bank Soal'. Gunakan <strong>menu titik tiga (⋮)</strong> di kanan atas untuk Backup, Restore, dan Pengaturan.</li>
-                                <li><strong>Bagian Soal:</strong> Ujian dapat dibagi menjadi beberapa bagian (misal: A. Pilihan Ganda, B. Esai). Gunakan tombol <strong>"Tambah Bagian Soal Baru"</strong>.</li>
+                                <li><strong>Bagian Soal:</strong> Ujian dapat dibagi menjadi beberapa bagian (misal: A. Pilihan Ganda, B. Esai). Gunakan tombol <strong>"Tambah Bagian Soal Baru"</strong> untuk memisahkan tipe soal. Anda bisa mengubah judul bagian (misal: dari "I" menjadi "A").</li>
+                                <li><strong>Editor Teks:</strong> Gunakan toolbar di atas setiap kotak teks untuk format <strong>bold</strong>, <i>italic</i>, <u>underline</u>, warna, dan perataan teks.</li>
+                                <li><strong>Menambah Soal:</strong> Di bawah setiap bagian, klik tombol jenis soal yang diinginkan (Pilihan Ganda, Isian Singkat, Uraian, dll).</li>
+                                <li><strong>Fitur Soal:</strong> Anda dapat menambahkan gambar, membuat sub-pertanyaan, mengatur kunci jawaban, dan menyertakan ruang jawaban kosong.</li>
                                 <li><strong>Menyusun Ulang:</strong> Tahan dan seret ikon titik-titik ( <DragHandleIcon className="w-4 h-4 inline-block -mt-1"/> ) di samping soal atau bagian untuk mengubah urutannya.</li>
                             </ul>
                         </GuideSection>
-                        
-                        <GuideSection title="3. Pratinjau, Cetak & Ekspor" icon={<PrintIcon className="w-5 h-5 text-blue-600" />}>
+
+                        <GuideSection title="3. Bank Soal" icon={<BankIcon className="w-5 h-5 text-blue-600" />}>
                             <ul className="list-disc list-outside space-y-1">
-                                <li>Klik tombol <strong>"Pratinjau"</strong> untuk melihat tampilan dokumen sebelum dicetak.</li>
-                                <li>Di perangkat mobile, tampilan akan otomatis disesuaikan dengan lebar layar. Gunakan kontrol zoom untuk memperbesar/memperkecil.</li>
-                                <li>Klik <PrintIcon className="w-4 h-4 inline-block -mt-1"/> <strong>"Cetak"</strong>, lalu ubah tujuan (destination) menjadi <strong>"Save as PDF"</strong> untuk menyimpan sebagai PDF.</li>
+                                <li><strong>Menyimpan:</strong> Di setiap soal pada editor, klik ikon <BookmarkIcon className="w-4 h-4 inline-block -mt-1"/> untuk menyimpannya ke Bank Soal.</li>
+                                <li><strong>Menggunakan:</strong> Klik tombol <strong>"Dari Bank Soal"</strong> di editor untuk membuka koleksi soal Anda dan menambahkannya ke ujian saat ini.</li>
+                                <li><strong>Mengelola:</strong> Buka halaman <strong>Bank Soal</strong> dari navigasi utama untuk memfilter, mencari, dan mengedit metadata soal Anda.</li>
                             </ul>
                         </GuideSection>
                         
-                        <GuideSection title="4. Manajemen Data (PENTING)" icon={<DownloadIcon className="w-5 h-5 text-blue-600" />}>
+                        <GuideSection title="4. Pratinjau, Cetak & Ekspor" icon={<PrintIcon className="w-5 h-5 text-blue-600" />}>
+                            <ul className="list-disc list-outside space-y-1">
+                                <li>Klik tombol <strong>"Pratinjau"</strong> untuk melihat tampilan dokumen sebelum dicetak.</li>
+                                <li>Beralih antara <strong>Lembar Soal</strong> dan <strong>Kunci Jawaban</strong>, atau atur zoom.</li>
+                                <li><strong>Ekspor ke HTML:</strong> Klik <FileCodeIcon className="w-4 h-4 inline-block -mt-1"/> <strong>"Ekspor HTML"</strong> untuk mengunduh file mandiri.</li>
+                                <li><strong>Menyimpan sebagai PDF:</strong> Klik <PrintIcon className="w-4 h-4 inline-block -mt-1"/> <strong>"Cetak"</strong>, lalu ubah tujuan (destination) menjadi <strong>"Save as PDF"</strong>.</li>
+                                <li>Klik ikon gerigi (<SettingsIcon className="w-4 h-4 inline-block -mt-1"/>) untuk mengatur <strong>kop surat,</strong> ukuran kertas, jenis huruf, dan margin.</li>
+                            </ul>
+                        </GuideSection>
+                        
+                        <GuideSection title="5. Manajemen Data (PENTING)" icon={<DownloadIcon className="w-5 h-5 text-blue-600" />}>
                              <ul className="list-disc list-outside space-y-1">
                                 <li><strong>Cadangkan:</strong> Secara berkala, klik ikon <DownloadIcon className="w-4 h-4 inline-block -mt-1"/> (Cadangkan Data) untuk mengunduh semua data Anda. Simpan file ini di tempat yang aman.</li>
                                 <li><strong>Pulihkan:</strong> Untuk memulihkan data, klik ikon <UploadIcon className="w-4 h-4 inline-block -mt-1"/> (Pulihkan Data) dan pilih file `.json` cadangan Anda.</li>
@@ -730,7 +791,7 @@ function App() {
                         <a href="https://github.com/aiprojek/soalgenius" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium">
                             <GithubIcon className="w-5 h-5" /> Kode Sumber
                         </a>
-                        <a href="https.me/aiprojek_community/32" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium">
+                        <a href="https://t.me/aiprojek_community/32" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-blue-600 hover:underline font-medium">
                             <MessageSquareIcon className="w-5 h-5" /> Beri Masukan
                         </a>
                     </div>
