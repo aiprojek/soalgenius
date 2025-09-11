@@ -528,16 +528,15 @@ function App() {
         const archiveProps = { exams, onEdit: handleEdit, onDelete: deleteExam, onPreview: (exam: Exam) => handlePreview(exam, 'archive'), onCreateNew: handleCreateNew, onDuplicate: duplicateExam, onGenerateVariant: generateVariant, activeView: view };
         switch (view) {
             case 'editor':
-                return <Editor exam={currentExam} onSave={handleSaveExam} onCancel={handleCancelEditor} onPreview={(exam) => handlePreview(exam, 'editor')} bank={bank} addQuestionToBank={addQuestionToBank} allExamsForMeta={allExamsForMeta} showIndicator={(msg) => displayIndicator(msg, 'success')}/>;
+                return <Editor exam={currentExam} onSave={handleSaveExam} onCancel={handleCancelEditor} onPreview={(exam) => handlePreview(exam as Exam, 'editor')} bank={bank} addQuestionToBank={addQuestionToBank} allExamsForMeta={allExamsForMeta} showIndicator={(msg) => displayIndicator(msg, 'success')}/>;
             case 'preview':
                 if (!currentExam) return <Archive {...archiveProps} />; // Fallback
                 return (
                     <div className="bg-gray-200 py-10 print:bg-white">
-                        <div className="fixed top-16 left-0 right-0 bg-white shadow-md p-2 z-20 no-print flex justify-between items-center overflow-hidden">
+                        <div className="fixed top-16 left-0 right-0 bg-white shadow-md p-2 z-10 no-print flex justify-start items-center gap-2 sm:gap-4">
                             <button onClick={() => setView(previousView)} className="px-4 py-2 text-sm bg-gray-200 rounded-md hover:bg-gray-300 flex-shrink-0">&larr; Kembali</button>
                             
-                            {/* Scrollable Command Area */}
-                            <div className="flex-1 min-w-0 overflow-x-auto flex justify-center">
+                            <div className="flex-1 min-w-0 overflow-x-auto flex justify-start">
                                 <div className="flex items-center gap-2 sm:gap-4 px-2 whitespace-nowrap">
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                         <button onClick={() => setIsPreviewingKey(false)} className={`px-3 py-1 rounded-full text-xs sm:text-sm ${!isPreviewingKey ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Lembar Soal</button>
@@ -593,7 +592,7 @@ function App() {
 
     return (
         <div className="bg-gray-100 min-h-screen font-sans">
-            <header className="bg-white shadow-sm sticky top-0 z-30 no-print">
+            <header className="bg-white shadow-sm sticky top-0 z-40 no-print">
                 <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
                     <div className="flex items-center gap-3">
                         <LogoIcon className="w-8 h-8" />
@@ -634,7 +633,7 @@ function App() {
             </main>
 
             {/* Mobile Bottom Navigation */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-30 no-print border-t">
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-20 no-print border-t">
                 <nav className="flex justify-around items-center h-16">
                     <button onClick={() => setView('archive')} className={`flex flex-col items-center justify-center gap-1 px-3 py-2 text-xs font-medium rounded-md w-28 ${(view === 'archive' || view === 'editor' || view === 'preview') ? 'text-blue-700' : 'text-gray-600'}`}>
                         <EditorIcon className="w-6 h-6" /><span>Editor Ujian</span>

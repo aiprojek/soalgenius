@@ -705,7 +705,7 @@ export default function Editor({
                 <PlusIcon className="w-5 h-5" /><span>Tambah Bagian Soal Baru</span>
             </button>
 
-            <div className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-10 no-print">
+            <div className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-30 no-print">
                 <div className="max-w-4xl mx-auto p-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                     <div className="flex items-center justify-between w-full sm:w-auto gap-4">
                         <div className="flex items-center gap-2">

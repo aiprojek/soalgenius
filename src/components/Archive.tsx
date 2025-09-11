@@ -163,7 +163,7 @@ export default function Archive({ exams, onEdit, onDelete, onPreview, onCreateNe
             {activeView === 'archive' && (
                  <button 
                     onClick={onCreateNew} 
-                    className="fixed bottom-20 md:bottom-8 right-4 md:right-8 bg-blue-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-105 z-20"
+                    className="fixed bottom-20 md:bottom-8 right-4 md:right-8 bg-blue-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-105 z-30"
                     title="Buat Ujian Baru"
                     aria-label="Buat Ujian Baru"
                 >
