@@ -197,7 +197,7 @@ const PdfPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ exam, 
                                                     <p className="font-semibold">Jawab:</p>
                                                     <div className="space-y-4">
                                                         <div className="border-b border-dotted border-black" style={{ height: '1.5em' }}></div>
-                                                        <div className="border-b border-dotted border-black" style={{ height: '1.5em' }}></div>
+                                                        <div className="border-b border-dotted border-black" style={{ height: '1.em' }}></div>
                                                         <div className="border-b border-dotted border-black" style={{ height: '1.5em' }}></div>
                                                     </div>
                                                 </div>
@@ -298,7 +298,7 @@ function App() {
     const defaultHeaderSettings: HeaderSettings = {
         showHeader: true,
         showLogo: true,
-        logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGESURBVHhe7dixTsNQEATgd98SAvw/w0sDVAQSNeFjQsU6My3Zdfep9e+NnWmvvfa2U255/1dO5wSAQkAAKCAACAgABAACCgEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIDcde+1t1/tA2dIeT5gdiueAAAAAElFTkSuQmCC', // Default placeholder
+        logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGESURBVHhe7dixTsNQEATgd98SAvw/w0sDVAQSNeFjQsU6My3Zdfep9e+NnWmvvfa2U255/1dO5wSAQkAAKCAACAgABAACCgEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIAAQEAALCAAEBAAiggBAQAAoIDcde+1t1/tA2dIeT5gdiueAAAAAElFTkSuQmCC', // Default placeholder
         headerLines: [
             { id: '1', text: 'PEMERINTAH KOTA CONTOH' },
             { id: '2', text: 'DINAS PENDIDIKAN DAN KEBUDAYAAN' },
@@ -532,7 +532,7 @@ function App() {
             case 'preview':
                 if (!currentExam) return <Archive {...archiveProps} />; // Fallback
                 return (
-                    <div className="bg-gray-200 py-10 print:bg-white">
+                    <div className="bg-gray-200 py-10 print:bg-white pt-16">
                         <div className="fixed top-16 left-0 right-0 bg-white shadow-md p-2 z-10 no-print flex justify-start items-center gap-2 sm:gap-4">
                             <button onClick={() => setView(previousView)} className="px-4 py-2 text-sm bg-gray-200 rounded-md hover:bg-gray-300 flex-shrink-0">&larr; Kembali</button>
                             
@@ -562,7 +562,7 @@ function App() {
                         <div id="pdf-preview-container" className="overflow-x-auto">
                             <div 
                                 id="pdf-preview-content" 
-                                className="flex flex-col items-center gap-8 pt-32 print:pt-0 mx-auto"
+                                className="flex flex-col items-center gap-8 pt-8 print:pt-0 mx-auto"
                                 style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}
                             >
                                 {isPreviewingKey ? 
@@ -591,18 +591,9 @@ function App() {
     );
     
     const getBottomPadding = () => {
-        switch(view) {
-            case 'editor':
-                return 'pb-48 md:pb-24'; // Space for mobile nav + editor bar on mobile, and just editor bar on desktop
-            case 'archive':
-            case 'bank':
-            case 'settings':
-                return 'pb-24 md:pb-8'; // Space for mobile nav on mobile, and footer on desktop
-            case 'preview':
-                return 'pb-8'; // No fixed bottom elements, just standard padding
-            default:
-                return 'pb-24 md:pb-8';
-        }
+        if (view === 'editor') return 'pb-48 md:pb-8'; // Space for editor's fixed bar + mobile nav
+        if (view === 'preview') return 'pb-8'; // No fixed bar
+        return 'pb-24 md:pb-8'; // Space for mobile nav
     };
 
     return (
@@ -628,7 +619,7 @@ function App() {
                     <div className="md:hidden relative" ref={headerMenuRef}>
                         <button onClick={() => setHeaderMenuOpen(prev => !prev)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" aria-label="Buka menu"><MenuIcon className="w-5 h-5"/></button>
                         {isHeaderMenuOpen && (
-                             <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg z-20 border py-1">
+                             <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg z-50 border py-1">
                                 <button onClick={() => { setView('settings'); setHeaderMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><SettingsIcon className="w-4 h-4"/> Pengaturan</button>
                                 <button onClick={backupData} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><DownloadIcon className="w-4 h-4"/> Cadangkan Data</button>
                                 <button onClick={handleTriggerUpload} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><UploadIcon className="w-4 h-4"/> Pulihkan Data</button>
@@ -640,7 +631,7 @@ function App() {
                 </nav>
             </header>
             
-            <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 ${getBottomPadding()}`}>
+            <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 relative z-0 ${getBottomPadding()}`}>
                 {renderView()}
                 <footer className="text-center py-4 text-xs sm:text-sm text-gray-500 no-print">
                     <p>&copy; {new Date().getFullYear()} Soal Genius. Dibuat dengan <HeartIcon className="w-4 h-4 inline text-red-500"/> untuk para pendidik.</p>
