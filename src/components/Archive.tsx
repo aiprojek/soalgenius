@@ -43,7 +43,7 @@ const ExamCard: React.FC<{
     ];
 
     return (
-        <div className="p-4 border rounded-lg flex justify-between items-start gap-4 hover:bg-gray-50 transition-colors">
+        <div className="p-4 border rounded-lg flex justify-between items-start gap-4 hover:bg-gray-50 transition-colors bg-white">
             <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-lg text-blue-700 flex items-center gap-2 flex-wrap">
                     <span>{exam.title}</span>
@@ -55,7 +55,7 @@ const ExamCard: React.FC<{
                 <p className="text-xs text-gray-500 mt-1">Dibuat: {new Date(exam.createdAt).toLocaleDateString('id-ID')}</p>
             </div>
             <div className="relative flex-shrink-0" ref={menuRef}>
-                <button onClick={() => setMenuOpen(prev => !prev)} className="p-2 text-gray-600 hover:bg-gray-200 rounded-full">
+                <button onClick={() => setMenuOpen(prev => !prev)} className="p-2 text-gray-600 hover:bg-gray-200 rounded-full" aria-label="Buka menu aksi">
                     <MenuIcon className="w-5 h-5" />
                 </button>
                 {isMenuOpen && (
@@ -97,17 +97,23 @@ export default function Archive({ exams, onEdit, onDelete, onPreview, onCreateNe
     const activeFilterCount = [filterSubject, filterGrade, filterStatus !== 'all'].filter(Boolean).length;
 
     return (
-        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg">
-            <div className="flex justify-between items-center mb-6">
+        <div className="bg-gray-100 sm:bg-white p-0 sm:p-6 sm:rounded-lg">
+            <div className="flex justify-between items-center mb-6 bg-white p-4 sm:p-0 rounded-lg sm:rounded-none shadow-sm sm:shadow-none">
                 <h2 className="text-2xl font-bold text-gray-900">Arsip Ujian</h2>
-                <button onClick={() => setFilterModalOpen(true)} className="relative flex items-center gap-2 bg-white text-gray-700 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors border shadow-sm">
-                    <FilterIcon className="w-5 h-5" />
-                    <span className="hidden sm:inline">Filter</span>
-                    {activeFilterCount > 0 && <span className="absolute -top-2 -right-2 w-5 h-5 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{activeFilterCount}</span>}
-                </button>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setFilterModalOpen(true)} className="relative flex items-center gap-2 bg-white text-gray-700 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors border shadow-sm">
+                        <FilterIcon className="w-5 h-5" />
+                        <span className="hidden sm:inline">Filter</span>
+                        {activeFilterCount > 0 && <span className="absolute -top-2 -right-2 w-5 h-5 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{activeFilterCount}</span>}
+                    </button>
+                    <button onClick={onCreateNew} className="hidden sm:flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors shadow-sm">
+                        <PlusIcon className="w-5 h-5" />
+                        <span>Buat Ujian</span>
+                    </button>
+                </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 px-4 sm:px-0">
                 {filteredExams.length > 0 ? filteredExams.map(exam => (
                     <ExamCard 
                         key={exam.id}
@@ -119,7 +125,7 @@ export default function Archive({ exams, onEdit, onDelete, onPreview, onCreateNe
                         onDelete={onDelete}
                     />
                 )) : (
-                    <div className="text-center py-12 px-6 bg-gray-50 rounded-lg">
+                    <div className="text-center py-12 px-6 bg-white sm:bg-gray-50 rounded-lg">
                         <h3 className="text-xl font-semibold text-gray-900">Belum Ada Ujian</h3>
                         <p className="text-gray-700 mt-2">Klik tombol + di pojok kanan bawah untuk memulai.</p>
                     </div>

@@ -9,7 +9,7 @@ import WelcomeModal from './components/WelcomeModal';
 import QuestionBank from './components/QuestionBank';
 import Settings from './components/Settings';
 import { QuestionType } from './types';
-import { SettingsIcon, DownloadIcon, UploadIcon, LogoIcon, PlusIcon, TrashIcon, ZoomInIcon, ZoomOutIcon, FileCodeIcon, PrintIcon, ArchiveIcon, InfoIcon, HeartIcon, MessageSquareIcon, GithubIcon, BookmarkIcon, CheckCircleIcon, WandIcon, CoffeeIcon, DragHandleIcon, EditorIcon, BankIcon, MenuIcon, ShareIcon } from './components/Icons';
+import { SettingsIcon, DownloadIcon, UploadIcon, LogoIcon, PlusIcon, TrashIcon, ZoomInIcon, ZoomOutIcon, FileCodeIcon, PrintIcon, ArchiveIcon, InfoIcon, HeartIcon, MessageSquareIcon, GithubIcon, BookmarkIcon, CheckCircleIcon, WandIcon, CoffeeIcon, DragHandleIcon, EditorIcon, BankIcon, MenuIcon } from './components/Icons';
 
 const RawHtmlRenderer: React.FC<{ html: string; className?: string }> = ({ html, className }) => (
     <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
@@ -102,7 +102,7 @@ const PdfPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ exam, 
                 )}
                 <h1 className="text-center font-bold text-xl mb-4 break-words">{exam.title}</h1>
                 
-                <div className="my-4 w-full flex items-stretch gap-4">
+                <div className="my-4 w-full flex flex-col sm:flex-row items-stretch gap-4">
                     <div className="flex-1">
                         <div className="grid grid-cols-[auto_auto_1fr] items-baseline gap-x-2 gap-y-1">
                             {/* Row 1: Nama */}
@@ -126,7 +126,7 @@ const PdfPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ exam, 
                             <div>{exam.time} Menit</div>
                         </div>
                     </div>
-                    <div className="w-28 border-2 border-black p-2 flex-shrink-0">
+                    <div className="w-28 border-2 border-black p-2 flex-shrink-0 self-start sm:self-auto mt-2 sm:mt-0">
                         <p className="font-bold text-left" style={{ fontSize: '8pt' }}>NILAI</p>
                     </div>
                 </div>
@@ -173,7 +173,7 @@ const PdfPreview: React.FC<{ exam: Exam, settings: HeaderSettings }> = ({ exam, 
                                                 </div>
                                             )}
                                             {q.type === QuestionType.MATCHING && (
-                                                <div className="mt-2 flex gap-8">
+                                                <div className="mt-2 flex flex-col sm:flex-row gap-4 sm:gap-8">
                                                     <div className="flex-1 space-y-2">
                                                         {q.matchingPremises?.map((premise, index) => (
                                                             <div key={premise.id} className="flex items-start">
@@ -384,13 +384,13 @@ function App() {
         
         const isMobile = window.innerWidth < 768;
         if (isMobile) {
-            const containerPadding = 24; 
-            const paperWidthPx = 210 * 3.78; 
+            const containerPadding = 24; // approx padding in the container
+            const paperWidthPx = 210 * 3.78; // A4 width in px (at 96 DPI)
             const screenWidth = window.innerWidth;
             const initialZoom = (screenWidth - containerPadding) / paperWidthPx;
-            setZoom(Math.min(initialZoom, 1));
+            setZoom(Math.min(initialZoom, 1)); // Set zoom to fit, but not more than 100%
         } else {
-            setZoom(0.8);
+            setZoom(0.8); // Default zoom for desktop
         }
     };
 
@@ -532,11 +532,11 @@ function App() {
             case 'preview':
                 if (!currentExam) return <Archive {...archiveProps} />; // Fallback
                 return (
-                    <div className="bg-gray-200 py-10 print:bg-white pt-16">
+                    <div className="bg-gray-200 py-4 sm:py-10 print:bg-white pt-16">
                         <div className="fixed top-16 left-0 right-0 bg-white shadow-md p-2 z-10 no-print flex justify-start items-center gap-2 sm:gap-4">
-                            <button onClick={() => setView(previousView)} className="px-4 py-2 text-sm bg-gray-200 rounded-md hover:bg-gray-300 flex-shrink-0">&larr; Kembali</button>
+                            <button onClick={() => setView(previousView)} className="px-3 py-2 text-sm bg-gray-200 rounded-md hover:bg-gray-300 flex-shrink-0">&larr; Kembali</button>
                             
-                            <div className="flex-1 min-w-0 overflow-x-auto flex justify-start">
+                            <div className="flex-1 min-w-0 overflow-x-auto">
                                 <div className="flex items-center gap-2 sm:gap-4 px-2 whitespace-nowrap">
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                         <button onClick={() => setIsPreviewingKey(false)} className={`px-3 py-1 rounded-full text-xs sm:text-sm ${!isPreviewingKey ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>Lembar Soal</button>
@@ -562,7 +562,7 @@ function App() {
                         <div id="pdf-preview-container" className="overflow-x-auto">
                             <div 
                                 id="pdf-preview-content" 
-                                className="flex flex-col items-center gap-8 pt-8 print:pt-0 mx-auto"
+                                className="flex flex-col items-center gap-8 pt-4 sm:pt-8 print:pt-0 mx-auto"
                                 style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}
                             >
                                 {isPreviewingKey ? 
@@ -631,9 +631,11 @@ function App() {
                 </nav>
             </header>
             
-            <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 isolate ${getBottomPadding()}`}>
-                {renderView()}
-                <footer className="text-center py-4 text-xs sm:text-sm text-gray-500 no-print">
+            <main className={`max-w-7xl mx-auto px-0 sm:px-6 lg:px-8 sm:pt-8 isolate ${getBottomPadding()}`}>
+                <div className="sm:shadow-lg sm:rounded-lg sm:overflow-hidden">
+                    {renderView()}
+                </div>
+                <footer className="text-center py-4 text-xs sm:text-sm text-gray-500 no-print mt-4">
                     <p>&copy; {new Date().getFullYear()} Soal Genius. Dibuat dengan <HeartIcon className="w-4 h-4 inline text-red-500"/> untuk para pendidik.</p>
                 </footer>
             </main>
@@ -654,7 +656,7 @@ function App() {
             {view === 'archive' && (
                  <button 
                     onClick={handleCreateNew} 
-                    className="fixed bottom-20 md:bottom-8 right-4 md:right-8 bg-blue-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-105 z-30"
+                    className="fixed bottom-20 md:bottom-8 right-4 md:right-8 bg-blue-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-105 z-30 sm:hidden"
                     title="Buat Ujian Baru"
                     aria-label="Buat Ujian Baru"
                 >
@@ -682,11 +684,11 @@ function App() {
                     </div>
 
                     <div className="space-y-4">
-                        <GuideSection title="1. Memulai Ujian Baru" icon={<PlusIcon className="w-5 h-5 text-blue-600" />}><ul className="list-disc list-outside space-y-1"><li>Dari halaman utama (Arsip), klik tombol **plus (+) melayang** di pojok kanan bawah.</li><li>Isi informasi dasar ujian seperti **Judul, Mata Pelajaran, Kelas,** dan **Waktu** pengerjaan.</li><li>Anda bisa menambahkan **deskripsi** internal (tidak akan dicetak) sebagai catatan.</li></ul></GuideSection>
+                        <GuideSection title="1. Memulai Ujian Baru" icon={<PlusIcon className="w-5 h-5 text-blue-600" />}><ul className="list-disc list-outside space-y-1"><li>Dari halaman utama (Arsip), klik tombol **plus (+) melayang** di pojok kanan bawah (di seluler) atau tombol **"Buat Ujian"** di kanan atas (di desktop).</li><li>Isi informasi dasar ujian seperti **Judul, Mata Pelajaran, Kelas,** dan **Waktu** pengerjaan.</li><li>Anda bisa menambahkan **deskripsi** internal (tidak akan dicetak) sebagai catatan.</li></ul></GuideSection>
                         <GuideSection title="2. Editor Soal" icon={<EditorIcon className="w-5 h-5 text-blue-600" />}><ul className="list-disc list-outside space-y-1"><li>**Bagian Soal:** Ujian dapat dibagi menjadi beberapa bagian. Gunakan tombol **"Tambah Bagian Soal Baru"** untuk memisahkan tipe soal.</li><li>**Editor Teks:** Gunakan toolbar di atas setiap kotak teks untuk format **bold**, *italic*, <u>underline</u>, warna, dan perataan teks.</li><li>**Menyusun Ulang:** Tahan dan seret ikon titik-titik ( <DragHandleIcon className="w-4 h-4 inline-block -mt-1"/> ) di samping soal atau bagian untuk mengubah urutannya.</li></ul></GuideSection>
                         <GuideSection title="3. Bank Soal" icon={<BankIcon className="w-5 h-5 text-blue-600" />}><ul className="list-disc list-outside space-y-1"><li>**Menyimpan:** Di setiap soal pada editor, klik ikon <BookmarkIcon className="w-4 h-4 inline-block -mt-1"/> untuk menyimpannya ke Bank Soal.</li><li>**Menggunakan:** Klik tombol **"Dari Bank Soal"** di editor untuk membuka koleksi soal Anda.</li><li>**Mengelola:** Buka halaman **Bank Soal** dari navigasi bawah untuk memfilter, mencari, dan mengedit soal Anda.</li></ul></GuideSection>
-                        <GuideSection title="4. Pratinjau, Cetak & Ekspor" icon={<PrintIcon className="w-5 h-5 text-blue-600" />}><ul className="list-disc list-outside space-y-1"><li>Klik tombol **"Pratinjau"** untuk melihat tampilan dokumen sebelum dicetak.</li><li>Gunakan tombol <ShareIcon className="w-4 h-4 inline-block -mt-1"/> untuk **Mencetak ke PDF** atau **Mengekspor ke HTML**.</li><li>Klik ikon gerigi (<SettingsIcon className="w-4 h-4 inline-block -mt-1"/>) dari menu utama untuk mengatur **kop surat,** ukuran kertas, dan margin.</li></ul></GuideSection>
-                        <GuideSection title="5. Manajemen Data (PENTING)" icon={<DownloadIcon className="w-5 h-5 text-blue-600" />}><ul className="list-disc list-outside space-y-1"><li>**Cadangkan:** Secara berkala, buka menu utama (ikon titik tiga) dan pilih **"Cadangkan Data"** untuk mengunduh semua data Anda.</li><li>**Pulihkan:** Untuk memulihkan data, pilih **"Pulihkan Data"** dari menu yang sama.</li></ul></GuideSection>
+                        <GuideSection title="4. Pratinjau, Cetak & Ekspor" icon={<PrintIcon className="w-5 h-5 text-blue-600" />}><ul className="list-disc list-outside space-y-1"><li>Klik tombol **"Pratinjau"** untuk melihat tampilan dokumen sebelum dicetak.</li><li>Gunakan tombol di bilah atas untuk **Mencetak ke PDF** atau **Mengekspor ke HTML**.</li><li>Klik ikon menu (tiga titik) di pojok kanan atas, lalu pilih **Pengaturan** untuk mengatur **kop surat,** ukuran kertas, dan margin.</li></ul></GuideSection>
+                        <GuideSection title="5. Manajemen Data (PENTING)" icon={<DownloadIcon className="w-5 h-5 text-blue-600" />}><ul className="list-disc list-outside space-y-1"><li>**Cadangkan:** Secara berkala, buka menu utama (ikon tiga titik) dan pilih **"Cadangkan Data"** untuk mengunduh semua data Anda.</li><li>**Pulihkan:** Untuk memulihkan data, pilih **"Pulihkan Data"** dari menu yang sama.</li></ul></GuideSection>
                         <GuideSection title="6. Menginstal Aplikasi (Offline)" icon={<DownloadIcon className="w-5 h-5 text-blue-600" />}>
                              <ul className="list-disc list-outside space-y-2">
                                 <li>Aplikasi ini bisa diinstal ke perangkat Anda untuk akses yang lebih cepat dan pengalaman seperti aplikasi asli, bahkan saat offline.</li>

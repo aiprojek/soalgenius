@@ -31,6 +31,7 @@ const SimpleEditor: React.FC<{
 }> = ({ value, onChange, placeholder, className = '' }) => {
     const editorRef = useRef<HTMLDivElement>(null);
 
+    // Sync state with contentEditable div
     useEffect(() => {
         if (editorRef.current && value !== editorRef.current.innerHTML) {
             editorRef.current.innerHTML = value;
@@ -58,7 +59,12 @@ const SimpleEditor: React.FC<{
                 <button type="button" onClick={() => execCmd('underline')} className="p-2 hover:bg-gray-200 rounded-md" title="Underline"><UnderlineIcon className="w-4 h-4" /></button>
                 <label className="relative p-2 hover:bg-gray-200 rounded-md cursor-pointer" title="Warna Teks">
                     <PaletteIcon className="w-4 h-4"/>
-                    <input type="color" ref={colorInputRef} onChange={(e) => execCmd('foreColor', e.target.value)} className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"/>
+                    <input
+                        type="color"
+                        ref={colorInputRef}
+                        onChange={(e) => execCmd('foreColor', e.target.value)}
+                        className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
+                    />
                 </label>
                  <div className="w-px h-5 bg-gray-300 mx-1"></div>
                 <button type="button" onClick={() => execCmd('justifyLeft')} className="p-2 hover:bg-gray-200 rounded-md" title="Rata Kiri"><AlignLeftIcon className="w-4 h-4" /></button>
@@ -66,7 +72,13 @@ const SimpleEditor: React.FC<{
                 <button type="button" onClick={() => execCmd('justifyRight')} className="p-2 hover:bg-gray-200 rounded-md" title="Rata Kanan"><AlignRightIcon className="w-4 h-4" /></button>
                 <button type="button" onClick={() => execCmd('justifyFull')} className="p-2 hover:bg-gray-200 rounded-md" title="Rata Kanan-Kiri"><AlignJustifyIcon className="w-4 h-4" /></button>
             </div>
-            <div ref={editorRef} contentEditable onInput={handleInput} className="custom-editor !border-0 !rounded-t-none !shadow-none !ring-0" data-placeholder={placeholder}/>
+            <div
+                ref={editorRef}
+                contentEditable
+                onInput={handleInput}
+                className="custom-editor !border-0 !rounded-t-none !shadow-none !ring-0"
+                data-placeholder={placeholder}
+            />
         </div>
     );
 };
@@ -476,21 +488,27 @@ export default function Editor({
     exam: Exam | null; 
     onSave: (exam: Exam | Omit<Exam, 'id' | 'createdAt'>) => void; 
     onCancel: () => void; 
-    onPreview: (exam: Exam) => void;
+    onPreview: (exam: Exam | Omit<Exam, 'id' | 'createdAt'>) => void;
     bank: BankQuestion[];
     addQuestionToBank: (question: Question, subject: string, grade: string, tags: string[]) => boolean;
     allExamsForMeta: { subject: string, grade: string }[];
     showIndicator: (message: string) => void;
 }) {
     const AUTOSAVE_KEY = 'soalgenius-autosave';
-    const emptyExam: Omit<Exam, 'id' | 'createdAt'> = { title: '', subject: '', grade: '', time: 90, status: 'draft', description: '', sections: [{ id: crypto.randomUUID(), title: 'I', instruction: '', questions: [] }] };
+    const emptyExam: Omit<Exam, 'id' | 'createdAt'> = {
+        title: '', subject: '', grade: '', time: 90, status: 'draft', description: '',
+        sections: [{ id: crypto.randomUUID(), title: 'I', instruction: '', questions: [] }],
+    };
     const [currentExam, setCurrentExam] = useState<Exam | Omit<Exam, 'id'|'createdAt'>>(exam || emptyExam);
     const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const isMounted = useRef(false);
     const [isBankModalOpen, setBankModalOpen] = useState(false);
     const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
-    const [draggedItem, setDraggedItem] = useState<{type: 'section' | 'question', sectionId: string, questionId?: string} | null>(null);
     const [isInfoCollapsed, setInfoCollapsed] = useState(false);
+
+    const [draggedItem, setDraggedItem] = useState<{type: 'section' | 'question', sectionId: string, questionId?: string} | null>(null);
+    const [dropTarget, setDropTarget] = useState<{type: 'section' | 'question', sectionId: string, questionId?: string} | null>(null);
+
 
     // On component mount, check for autosaved data
     useEffect(() => {
@@ -499,48 +517,92 @@ export default function Editor({
             if (autosavedData) {
                 const restoredExam: Exam = JSON.parse(autosavedData);
                 if (restoredExam && restoredExam.title !== undefined && restoredExam.sections) {
-                    if (window.confirm('Ditemukan draf yang belum disimpan. Apakah Anda ingin memulihkannya?')) setCurrentExam(restoredExam);
-                    else localStorage.removeItem(AUTOSAVE_KEY);
+                    if (window.confirm('Ditemukan draf yang belum disimpan. Apakah Anda ingin memulihkannya?')) {
+                        setCurrentExam(restoredExam);
+                    } else {
+                        localStorage.removeItem(AUTOSAVE_KEY);
+                    }
                 }
             }
         } catch (error) {
             console.error("Gagal memulihkan dari autosave:", error);
             localStorage.removeItem(AUTOSAVE_KEY);
         }
+        
         const mountTimer = setTimeout(() => { isMounted.current = true; }, 500);
         return () => clearTimeout(mountTimer);
     }, []);
 
-    // Autosave logic
+    // Autosave logic on currentExam changes (debounced)
     useEffect(() => {
         if (!isMounted.current) return;
+
         setAutosaveStatus('saving');
         const handler = setTimeout(() => {
             try {
                 if (currentExam.title || currentExam.subject || currentExam.grade || currentExam.sections.some(s => s.questions.length > 0)) {
                     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(currentExam));
                     setAutosaveStatus('saved');
-                } else setAutosaveStatus('idle');
+                } else {
+                    setAutosaveStatus('idle');
+                }
             } catch (error) {
                 console.error("Gagal menyimpan otomatis:", error);
                 setAutosaveStatus('error');
             }
         }, 1500);
-        return () => clearTimeout(handler);
+
+        return () => { clearTimeout(handler); };
     }, [currentExam]);
 
     useEffect(() => {
-        if (!exam) setCurrentExam(emptyExam);
-        else if ('id' in currentExam && exam.id !== currentExam.id) setCurrentExam(exam);
+        if (!exam) {
+            setCurrentExam(emptyExam);
+        } else {
+            if (!isMounted.current || ('id' in currentExam && exam.id !== currentExam.id)) {
+                 setCurrentExam(exam);
+            }
+        }
     }, [exam]);
 
-    const updateExamInfo = <K extends keyof Omit<Exam, 'id'|'createdAt'|'sections'>>(field: K, value: (Omit<Exam, 'id'|'createdAt'|'sections'>)[K]) => setCurrentExam(prev => ({ ...prev, [field]: value }));
-    const addSection = () => setCurrentExam(prev => ({...prev, sections: [...prev.sections, { id: crypto.randomUUID(), title: toRoman(prev.sections.length + 1), instruction: '', questions: [] }]}));
-    const updateSection = (id: string, field: keyof Section, value: string) => setCurrentExam(prev => ({ ...prev, sections: prev.sections.map(s => s.id === id ? { ...s, [field]: value } : s) }));
+    const updateExamInfo = <K extends keyof Omit<Exam, 'id'|'createdAt'|'sections'>>(
+        field: K,
+        value: (Omit<Exam, 'id'|'createdAt'|'sections'>)[K]
+    ) => {
+        setCurrentExam(prev => ({ ...prev, [field]: value }));
+    };
+
+    const addSection = () => {
+        const newSection: Section = {
+            id: crypto.randomUUID(),
+            title: toRoman(currentExam.sections.length + 1),
+            instruction: '',
+            questions: [],
+        };
+        setCurrentExam(prev => ({...prev, sections: [...prev.sections, newSection]}));
+    };
+
+    const updateSection = (id: string, field: keyof Section, value: string | Question[]) => {
+        setCurrentExam(prev => ({
+            ...prev,
+            sections: prev.sections.map(s => s.id === id ? { ...s, [field]: value } : s)
+        }));
+    };
+
     const removeSection = (id: string) => {
-        if (!window.confirm('Yakin ingin menghapus bagian ini beserta semua soal di dalamnya?')) return;
-        if (currentExam.sections.length <= 1) { alert("Tidak bisa menghapus satu-satunya bagian soal."); return; }
-        setCurrentExam(prev => ({ ...prev, sections: prev.sections.filter(s => s.id !== id) }));
+        if (!window.confirm('Yakin ingin menghapus bagian ini beserta semua soal di dalamnya?')) {
+            return;
+        }
+        
+        if (currentExam.sections.length <= 1) {
+            alert("Tidak bisa menghapus satu-satunya bagian soal.");
+            return;
+        }
+
+        setCurrentExam(prev => ({
+            ...prev,
+            sections: prev.sections.filter(s => s.id !== id),
+        }));
     };
     
     const addQuestion = (sectionId: string, type: QuestionType) => {
@@ -565,7 +627,10 @@ export default function Editor({
                         answerKeyMatching: [],
                     };
 
-                    const isInstructionEmpty = !s.instruction || (s.instruction.replace(/<[^>]*>?/gm, '').trim() === '');
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = s.instruction;
+                    const textContent = tempDiv.textContent || '';
+                    const isInstructionEmpty = !s.instruction || textContent.trim() === '';
                     
                     const instruction = isInstructionEmpty ? instructionDefaults[type] : s.instruction;
                     return { ...s, instruction, questions: [...s.questions, newQuestion] };
@@ -575,110 +640,251 @@ export default function Editor({
         }));
     };
     
-    const updateQuestion = (sectionId: string, updatedQuestion: Question) => setCurrentExam(prev => ({ ...prev, sections: prev.sections.map(s => s.id === sectionId ? { ...s, questions: s.questions.map(q => q.id === updatedQuestion.id ? updatedQuestion : q) } : s) }));
-    const removeQuestion = (sectionId: string, questionId: string) => setCurrentExam(prev => ({...prev, sections: prev.sections.map(s => s.id === sectionId ? { ...s, questions: s.questions.filter(q => q.id !== questionId).map((q, i) => ({ ...q, questionNumber: (i + 1).toString() })) } : s) }));
-    const handleSave = () => { onSave(currentExam); localStorage.removeItem(AUTOSAVE_KEY); };
-    const handleCancel = () => { if (!localStorage.getItem(AUTOSAVE_KEY) || window.confirm('Anda memiliki perubahan yang belum disimpan. Yakin ingin membatalkan?')) { localStorage.removeItem(AUTOSAVE_KEY); onCancel(); } };
-    const handleSaveQuestionToBank = (question: Question) => { if (addQuestionToBank(question, currentExam.subject, currentExam.grade, [])) showIndicator('Soal berhasil disimpan ke bank!'); };
-    const handleOpenBankModal = (sectionId: string) => { setActiveSectionId(sectionId); setBankModalOpen(true); };
+    const updateQuestion = (sectionId: string, updatedQuestion: Question) => {
+        setCurrentExam(prev => ({
+            ...prev,
+            sections: prev.sections.map(s => s.id === sectionId ? { ...s, questions: s.questions.map(q => q.id === updatedQuestion.id ? updatedQuestion : q) } : s)
+        }));
+    };
+  
+    const removeQuestion = (sectionId: string, questionId: string) => {
+        setCurrentExam(prev => ({
+            ...prev,
+            sections: prev.sections.map(section => {
+                if (section.id === sectionId) {
+                    const updatedQuestions = section.questions.filter(q => q.id !== questionId);
+                    // Re-number questions
+                    updatedQuestions.forEach((q, index) => {
+                        q.questionNumber = (index + 1).toString();
+                    });
+                    return { ...section, questions: updatedQuestions };
+                }
+                return section;
+            }),
+        }));
+    };
+
+    const handleSave = () => {
+        onSave(currentExam);
+        localStorage.removeItem(AUTOSAVE_KEY);
+    };
+
+    const handleCancel = () => {
+        const autosavedData = localStorage.getItem(AUTOSAVE_KEY);
+        if (autosavedData) {
+            if (window.confirm('Anda memiliki perubahan yang belum disimpan. Apakah Anda yakin ingin membatalkan dan menghapusnya?')) {
+                localStorage.removeItem(AUTOSAVE_KEY);
+                onCancel();
+            }
+        } else {
+            onCancel();
+        }
+    };
+    
+    const handleSaveQuestionToBank = (question: Question) => {
+        const success = addQuestionToBank(question, currentExam.subject, currentExam.grade, []);
+        if (success) {
+            showIndicator('Soal berhasil disimpan ke bank!');
+        }
+    };
+
+    const handleOpenBankModal = (sectionId: string) => {
+        setActiveSectionId(sectionId);
+        setBankModalOpen(true);
+    };
 
     const handleAddQuestionsFromBank = (questionsToAdd: Question[]) => {
         if (!activeSectionId) return;
-        setCurrentExam(prev => ({...prev, sections: prev.sections.map(s => s.id === activeSectionId ? {...s, questions: [...s.questions, ...questionsToAdd.map((q, i) => ({...q, id: crypto.randomUUID(), questionNumber: (s.questions.length + i + 1).toString()}))]} : s) }));
+
+        setCurrentExam(prev => ({
+            ...prev,
+            sections: prev.sections.map(s => {
+                if (s.id === activeSectionId) {
+                    const existingQuestions = s.questions;
+                    const newQuestions = questionsToAdd.map((q, index) => ({
+                        ...q,
+                        id: crypto.randomUUID(), // Ensure new unique ID in the exam
+                        questionNumber: (existingQuestions.length + index + 1).toString(),
+                    }));
+                    return { ...s, questions: [...existingQuestions, ...newQuestions] };
+                }
+                return s;
+            })
+        }));
         setActiveSectionId(null);
     };
 
-    const handleDragStart = (e: React.DragEvent, type: 'section' | 'question', sectionId: string, questionId?: string) => { e.dataTransfer.effectAllowed = 'move'; setDraggedItem({ type, sectionId, questionId }); };
-    const handleDragEnd = () => setDraggedItem(null);
-    const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+    const handleDragStart = (e: React.DragEvent, type: 'section' | 'question', sectionId: string, questionId?: string) => {
+        e.dataTransfer.effectAllowed = 'move';
+        setDraggedItem({ type, sectionId, questionId });
+    };
 
-    const handleDrop = (e: React.DragEvent, targetSectionId: string, targetQuestionId?: string) => {
+    const handleDragEnd = () => {
+        setDraggedItem(null);
+        setDropTarget(null);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e: React.DragEvent, targetType: 'section' | 'question', targetSectionId: string, targetQuestionId?: string) => {
         e.preventDefault();
         if (!draggedItem) return;
-        const { type: sourceType, sectionId: sourceSectionId, questionId: sourceQuestionId } = draggedItem;
 
-        setCurrentExam(prev => {
-            const newSections = JSON.parse(JSON.stringify(prev.sections));
-            // Move Section
-            if (sourceType === 'section' && sourceSectionId !== targetSectionId) {
-                const sourceIndex = newSections.findIndex((s: Section) => s.id === sourceSectionId);
-                const targetIndex = newSections.findIndex((s: Section) => s.id === targetSectionId);
-                if (sourceIndex === -1 || targetIndex === -1) return prev;
-                const [movedSection] = newSections.splice(sourceIndex, 1);
-                newSections.splice(targetIndex, 0, movedSection);
-                return { ...prev, sections: newSections.map((s: Section, i: number) => ({ ...s, title: toRoman(i + 1) })) };
-            }
-            // Move Question
-            if (sourceType === 'question' && sourceQuestionId && targetQuestionId && sourceQuestionId !== targetQuestionId) {
-                const section = newSections.find((s: Section) => s.id === sourceSectionId);
-                if (!section) return prev;
-                const sourceIndex = section.questions.findIndex((q: Question) => q.id === sourceQuestionId);
-                const targetIndex = section.questions.findIndex((q: Question) => q.id === targetQuestionId);
-                if (sourceIndex === -1 || targetIndex === -1) return prev;
-                const [movedQuestion] = section.questions.splice(sourceIndex, 1);
-                section.questions.splice(targetIndex, 0, movedQuestion);
-                section.questions.forEach((q: Question, i: number) => q.questionNumber = (i + 1).toString());
-                return { ...prev, sections: newSections };
-            }
-            return prev;
-        });
+        if (draggedItem.type === 'section' && targetType === 'section') {
+            const sourceId = draggedItem.sectionId;
+            const targetId = targetSectionId;
+            if (sourceId === targetId) return;
+            const sourceIndex = currentExam.sections.findIndex(s => s.id === sourceId);
+            const targetIndex = currentExam.sections.findIndex(s => s.id === targetId);
+            if (sourceIndex === -1 || targetIndex === -1) return;
+            const newSections = [...currentExam.sections];
+            const [removed] = newSections.splice(sourceIndex, 1);
+            newSections.splice(targetIndex, 0, removed);
+            setCurrentExam(prev => ({ ...prev, sections: newSections.map((s, i) => ({ ...s, title: toRoman(i + 1) })) }));
+        }
+
+        if (draggedItem.type === 'question') {
+             const sourceQId = draggedItem.questionId!;
+             const sourceSId = draggedItem.sectionId;
+             const targetSId = targetSectionId;
+             const targetQId = targetQuestionId;
+             
+             let sourceQuestion: Question | undefined;
+             const newSections = JSON.parse(JSON.stringify(currentExam.sections));
+             const sourceSection = newSections.find((s:Section) => s.id === sourceSId);
+             if (!sourceSection) return;
+
+             const sourceQIndex = sourceSection.questions.findIndex((q:Question) => q.id === sourceQId);
+             if (sourceQIndex > -1) {
+                 [sourceQuestion] = sourceSection.questions.splice(sourceQIndex, 1);
+             }
+             if (!sourceQuestion) return;
+
+             const targetSection = newSections.find((s:Section) => s.id === targetSId);
+             if (!targetSection) return;
+             
+             const targetQIndex = targetQId ? targetSection.questions.findIndex((q:Question) => q.id === targetQId) : targetSection.questions.length;
+             targetSection.questions.splice(targetQIndex, 0, sourceQuestion);
+
+             newSections.forEach((section: Section) => {
+                section.questions.forEach((q, i) => { q.questionNumber = (i + 1).toString() });
+             });
+             updateSection(draggedItem.sectionId, 'questions', newSections);
+        }
+
         handleDragEnd();
     };
 
 
     const AutosaveIndicator = () => {
         switch(autosaveStatus) {
-            case 'saving': return <span className="text-sm text-gray-500 italic">Menyimpan...</span>;
-            case 'saved': return <><span className="text-sm text-green-600 sm:hidden">Disimpan</span><span className="text-sm text-green-600 hidden sm:inline">Perubahan disimpan</span></>;
-            case 'error': return <span className="text-sm text-red-600">Gagal</span>;
-            default: return null;
+            case 'saving':
+                return <span className="text-sm text-gray-500 italic">Menyimpan...</span>;
+            case 'saved':
+                return <span className="text-sm text-green-600">Perubahan disimpan</span>;
+            case 'error':
+                 return <span className="text-sm text-red-600">Gagal menyimpan</span>;
+            default:
+                return <span className="text-sm text-gray-500">&nbsp;</span>;
         }
     };
 
     return (
-        <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold mb-6 text-gray-900">{exam ? 'Ubah Ujian' : 'Buat Ujian Baru'}</h2>
-
-            <div className="bg-white rounded-lg shadow-lg mb-6 overflow-hidden">
-                 <button onClick={() => setInfoCollapsed(prev => !prev)} className="w-full flex justify-between items-center p-4 bg-gray-50 border-b">
-                    <h3 className="text-lg font-semibold text-gray-800">Informasi Ujian</h3>
-                    {isInfoCollapsed ? <ChevronDownIcon className="w-5 h-5 text-gray-600"/> : <ChevronUpIcon className="w-5 h-5 text-gray-600"/>}
+        <div className="max-w-4xl mx-auto pb-28">
+            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg mb-6">
+                 <button 
+                    className="flex justify-between items-center w-full text-left mb-4"
+                    onClick={() => setInfoCollapsed(p => !p)}
+                    aria-expanded={!isInfoCollapsed}
+                >
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">{exam ? 'Ubah Ujian' : 'Buat Ujian Baru'}</h2>
+                    <span className="text-blue-600">
+                        {isInfoCollapsed ? <ChevronDownIcon className="w-6 h-6" /> : <ChevronUpIcon className="w-6 h-6"/>}
+                    </span>
                 </button>
+                
                 {!isInfoCollapsed && (
-                    <div className="p-6">
+                    <div className="border-t pt-4">
+                        <h3 className="text-xl font-semibold mb-4 text-gray-800">Informasi Ujian</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input type="text" placeholder="Judul Ujian (e.g. Ujian Akhir Semester)" value={currentExam.title} onChange={e => updateExamInfo('title', e.target.value)} className="p-2 border rounded-md bg-white" />
                             <input type="text" placeholder="Mata Pelajaran" value={currentExam.subject} onChange={e => updateExamInfo('subject', e.target.value)} className="p-2 border rounded-md bg-white" />
                             <input type="text" placeholder="Kelas / Jenjang" value={currentExam.grade} onChange={e => updateExamInfo('grade', e.target.value)} className="p-2 border rounded-md bg-white" />
                             <input type="number" placeholder="Waktu (menit)" value={currentExam.time} onChange={e => updateExamInfo('time', Number(e.target.value))} className="p-2 border rounded-md bg-white" />
                         </div>
-                         <div className="mt-4">
+                        <div className="mt-4">
                             <textarea placeholder="Keterangan (e.g. 'Untuk Remedial', tidak akan dicetak)..." value={currentExam.description || ''} onChange={e => updateExamInfo('description', e.target.value)} className="p-2 border rounded-md bg-white w-full" rows={2}/>
                         </div>
                     </div>
                 )}
             </div>
             
-            <div>
+            <div className="space-y-6">
                 {currentExam.sections.map((section, sectionIndex) => (
-                    <div key={section.id} draggable onDragStart={(e) => handleDragStart(e, 'section', section.id)} onDragEnd={handleDragEnd} onDrop={(e) => handleDrop(e, section.id)} onDragOver={handleDragOver} className={`transition-opacity ${draggedItem?.sectionId === section.id ? 'opacity-50' : 'opacity-100'}`}>
-                        <div className="bg-white p-6 rounded-lg shadow-lg mb-6 relative">
-                            <div className="absolute left-0 top-0 bottom-0 flex items-center -ml-8 cursor-grab text-gray-400 hover:text-gray-700" title="Seret untuk menyusun ulang bagian"><DragHandleIcon /></div>
+                    <div 
+                        key={section.id} 
+                        draggable 
+                        onDragStart={(e) => handleDragStart(e, 'section', section.id)}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, 'section', section.id)}
+                        onDragEnter={() => setDropTarget({type: 'section', sectionId: section.id})}
+                        className={`transition-opacity ${draggedItem?.type === 'section' && draggedItem.sectionId === section.id ? 'opacity-50' : 'opacity-100'}`}
+                    >
+                        {dropTarget?.type === 'section' && dropTarget.sectionId === section.id && draggedItem?.sectionId !== section.id && (
+                             <div className="h-2 bg-blue-400 rounded-full my-2 animate-pulse" />
+                        )}
+                        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg relative" >
+                            <div className="absolute left-0 top-0 bottom-0 flex items-center -ml-2 sm:-ml-8 cursor-grab text-gray-400 hover:text-gray-700" title="Seret untuk menyusun ulang bagian">
+                                <DragHandleIcon />
+                            </div>
+
                             <div className="flex justify-between items-center mb-4 border-b pb-2">
                                 <h3 className="text-xl font-semibold text-gray-800">Bagian Soal {toRoman(sectionIndex + 1)}</h3>
-                                {currentExam.sections.length > 1 && <button onClick={() => removeSection(section.id)} className="p-1 text-red-500 hover:bg-red-100 rounded-full"><TrashIcon className="w-5 h-5"/></button>}
+                                {currentExam.sections.length > 1 && 
+                                    <button onClick={() => removeSection(section.id)} className="p-1 text-red-500 hover:bg-red-100 rounded-full"><TrashIcon className="w-5 h-5"/></button>
+                                }
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 items-start">
                                 <input type="text" placeholder="Judul (e.g. I, A)" value={section.title} onChange={e => updateSection(section.id, 'title', e.target.value)} className="p-2 border rounded-md md:col-span-1 bg-white" />
-                                <div className="md:col-span-3"><SimpleEditor value={section.instruction} onChange={(html) => updateSection(section.id, 'instruction', html)} placeholder="Instruksi pengerjaan soal..."/></div>
+                                <div className="md:col-span-3">
+                                    <SimpleEditor
+                                        value={section.instruction}
+                                        onChange={(html) => updateSection(section.id, 'instruction', html)}
+                                        placeholder="Instruksi pengerjaan soal..."
+                                    />
+                                </div>
                             </div>
                             
-                            <div>
+                            <div onDrop={(e) => handleDrop(e, 'question', section.id)} onDragOver={handleDragOver} className="min-h-[2rem]">
                             {section.questions.map((q) => (
-                                <div key={q.id} draggable onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, 'question', section.id, q.id); }} onDragEnd={(e) => { e.stopPropagation(); handleDragEnd(); }} onDrop={(e) => { e.stopPropagation(); handleDrop(e, section.id, q.id); }} onDragOver={handleDragOver} className={`relative transition-opacity ${draggedItem?.questionId === q.id ? 'opacity-50' : 'opacity-100'}`}>
-                                    <div className="flex items-start gap-2">
-                                        <div className="cursor-grab text-gray-400 hover:text-gray-700 pt-5" title="Seret untuk menyusun ulang soal"><DragHandleIcon className="w-5 h-5"/></div>
-                                        <div className="flex-1"><QuestionItem question={q} updateQuestion={(uq) => updateQuestion(section.id, uq)} removeQuestion={(qid) => removeQuestion(section.id, qid)} onSaveToBank={handleSaveQuestionToBank}/></div>
+                                <div 
+                                    key={q.id}
+                                    draggable
+                                    onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, 'question', section.id, q.id); }}
+                                    onDragEnd={(e) => { e.stopPropagation(); handleDragEnd(); }}
+                                    onDrop={(e) => { e.stopPropagation(); handleDrop(e, 'question', section.id, q.id); }}
+                                    onDragEnter={(e) => { e.stopPropagation(); setDropTarget({type: 'question', sectionId: section.id, questionId: q.id}); }}
+                                    className={`relative transition-opacity ${draggedItem?.questionId === q.id ? 'opacity-50' : 'opacity-100'}`}
+                                >
+                                    {dropTarget?.type === 'question' && dropTarget.sectionId === section.id && dropTarget.questionId === q.id && draggedItem?.questionId !== q.id && (
+                                        <div className="h-1.5 bg-blue-400 rounded-full my-2" />
+                                    )}
+                                    <div className="flex items-start gap-1 sm:gap-2">
+                                        <div className="cursor-grab text-gray-400 hover:text-gray-700 pt-5" title="Seret untuk menyusun ulang soal">
+                                            <DragHandleIcon className="w-5 h-5"/>
+                                        </div>
+                                        <div className="flex-1">
+                                            <QuestionItem 
+                                                question={q}
+                                                updateQuestion={(uq) => updateQuestion(section.id, uq)}
+                                                removeQuestion={(qid) => removeQuestion(section.id, qid)}
+                                                onSaveToBank={handleSaveQuestionToBank}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -693,7 +899,10 @@ export default function Editor({
                                     <button onClick={() => addQuestion(section.id, QuestionType.MATCHING)} className="bg-violet-100 text-violet-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-violet-200">Menjodohkan</button>
                                     <button onClick={() => addQuestion(section.id, QuestionType.SHORT_ANSWER)} className="bg-lime-100 text-lime-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-lime-200">Isian Singkat</button>
                                     <button onClick={() => addQuestion(section.id, QuestionType.ESSAY)} className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-amber-200">Uraian</button>
-                                    <button onClick={() => handleOpenBankModal(section.id)} className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-indigo-200 flex items-center gap-1.5"><ArchiveIcon className="w-4 h-4"/> Dari Bank Soal</button>
+                                    <button onClick={() => handleOpenBankModal(section.id)} className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-medium hover:bg-indigo-200 flex items-center gap-1.5">
+                                        <ArchiveIcon className="w-4 h-4"/>
+                                        Dari Bank Soal
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -701,32 +910,50 @@ export default function Editor({
                 ))}
             </div>
             
-            <button onClick={addSection} className="w-full flex justify-center items-center gap-2 text-blue-600 border-2 border-dashed border-blue-300 rounded-lg py-3 hover:bg-blue-50 transition-colors">
-                <PlusIcon className="w-5 h-5" /><span>Tambah Bagian Soal Baru</span>
+            <button onClick={addSection} className="w-full flex justify-center items-center gap-2 text-blue-600 border-2 border-dashed border-blue-300 rounded-lg py-3 hover:bg-blue-50 transition-colors mt-6">
+                <PlusIcon className="w-5 h-5" />
+                <span>Tambah Bagian Soal Baru</span>
             </button>
 
-            <div className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-30 no-print">
-                <div className="max-w-4xl mx-auto p-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                    <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+            <div className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] z-30">
+                <div className="max-w-4xl mx-auto p-3 flex justify-between items-center">
+                    <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
                             <label className="text-sm font-medium text-gray-700 hidden sm:inline-block mr-2">Status:</label>
-                            <button onClick={() => updateExamInfo('status', 'draft')} className={`px-3 py-1 rounded-full text-xs sm:text-sm transition-colors ${currentExam.status === 'draft' ? 'bg-yellow-100 text-yellow-800 font-semibold ring-1 ring-yellow-300' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Draft</button>
-                            <button onClick={() => updateExamInfo('status', 'finished')} className={`px-3 py-1 rounded-full text-xs sm:text-sm transition-colors ${currentExam.status === 'finished' ? 'bg-green-100 text-green-800 font-semibold ring-1 ring-green-300' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Selesai</button>
+                            <button 
+                                onClick={() => updateExamInfo('status', 'draft')}
+                                className={`px-3 py-1 rounded-full text-sm transition-colors ${currentExam.status === 'draft' ? 'bg-yellow-100 text-yellow-800 font-semibold ring-1 ring-yellow-300' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+                                Draft
+                            </button>
+                            <button 
+                                onClick={() => updateExamInfo('status', 'finished')}
+                                className={`px-3 py-1 rounded-full text-sm transition-colors ${currentExam.status === 'finished' ? 'bg-green-100 text-green-800 font-semibold ring-1 ring-green-300' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+                                Selesai
+                            </button>
                         </div>
-                        <div className="block sm:hidden"><AutosaveIndicator /></div>
+                        <div className="hidden sm:block">
+                            <AutosaveIndicator />
+                        </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <div className="hidden sm:block mr-4"><AutosaveIndicator /></div>
-                        <button onClick={handleCancel} className="bg-gray-200 text-gray-900 px-4 py-2 rounded-md hover:bg-gray-300 text-sm flex-1 sm:flex-initial">Batal</button>
-                        <button onClick={() => onPreview(currentExam as Exam)} className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center justify-center gap-2 text-sm flex-1 sm:flex-initial">
-                            <PrintIcon className="w-5 h-5" /><span className="hidden sm:inline">Pratinjau</span>
+                    <div className="flex gap-2 sm:gap-4">
+                        <button onClick={handleCancel} className="bg-gray-200 text-gray-900 px-3 sm:px-6 py-2 rounded-md hover:bg-gray-300 text-sm">Batal</button>
+                        <button onClick={() => onPreview(currentExam)} className="bg-gray-600 text-white px-3 sm:px-6 py-2 rounded-md hover:bg-gray-700 flex items-center gap-2 text-sm">
+                            <PrintIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <span className="hidden sm:inline">Pratinjau</span>
                         </button>
-                        <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm flex-1 sm:flex-initial">Simpan</button>
+                        <button onClick={handleSave} className="bg-blue-600 text-white px-3 sm:px-6 py-2 rounded-md hover:bg-blue-700 text-sm">Simpan</button>
                     </div>
                 </div>
             </div>
-            {isBankModalOpen && <QuestionBankModal isOpen={isBankModalOpen} onClose={() => setBankModalOpen(false)} bank={bank} onAddQuestions={handleAddQuestionsFromBank} allExams={allExamsForMeta}/>}
+            {isBankModalOpen && (
+                <QuestionBankModal
+                    isOpen={isBankModalOpen}
+                    onClose={() => setBankModalOpen(false)}
+                    bank={bank}
+                    onAddQuestions={handleAddQuestionsFromBank}
+                    allExams={allExamsForMeta}
+                />
+            )}
         </div>
     );
 }
