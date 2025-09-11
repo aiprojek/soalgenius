@@ -10,7 +10,7 @@ import QuestionBank from './components/QuestionBank';
 import Settings from './components/Settings';
 import Sidebar from './components/Sidebar'; // Import Sidebar
 import { QuestionType } from './types';
-import { SettingsIcon, DownloadIcon, UploadIcon, LogoIcon, PlusIcon, TrashIcon, ZoomInIcon, ZoomOutIcon, FileCodeIcon, PrintIcon, ArchiveIcon, InfoIcon, HeartIcon, MessageSquareIcon, GithubIcon, BookmarkIcon, CheckCircleIcon, WandIcon, CoffeeIcon, DragHandleIcon, EditorIcon, BankIcon, HamburgerIcon } from './components/Icons';
+import { SettingsIcon, DownloadIcon, UploadIcon, LogoIcon, PlusIcon, TrashIcon, ZoomInIcon, ZoomOutIcon, FileCodeIcon, PrintIcon, ArchiveIcon, InfoIcon, HeartIcon, MessageSquareIcon, GithubIcon, BookmarkIcon, CheckCircleIcon, WandIcon, CoffeeIcon, DragHandleIcon, EditorIcon, BankIcon, HamburgerIcon, MenuIcon } from './components/Icons';
 
 const RawHtmlRenderer: React.FC<{ html: string; className?: string }> = ({ html, className }) => (
     <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
@@ -299,6 +299,8 @@ function App() {
     const [zoom, setZoom] = useState(1);
     const [previewSource, setPreviewSource] = useState<View>('archive');
     const [isSidebarOpen, setSidebarOpen] = useState(false);
+    const [isActionsMenuOpen, setActionsMenuOpen] = useState(false);
+    const actionsMenuRef = useRef<HTMLDivElement>(null);
 
     const defaultHeaderSettings: HeaderSettings = {
         showHeader: true,
@@ -324,6 +326,16 @@ function App() {
             return defaultHeaderSettings;
         }
     });
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target as Node)) {
+                setActionsMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     useEffect(() => {
         localStorage.setItem('soalgenius-header-settings', JSON.stringify(headerSettings));
@@ -636,8 +648,9 @@ function App() {
         <div className="bg-gray-100 min-h-screen font-sans">
             <header className="bg-white shadow-sm sticky top-0 z-30 no-print">
                 <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+                    {/* Left Side */}
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 -ml-2 text-gray-600">
+                        <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 -ml-2 text-gray-600" aria-label="Buka navigasi">
                            <HamburgerIcon className="w-6 h-6" />
                         </button>
                         <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('archive')}>
@@ -645,7 +658,9 @@ function App() {
                             <h1 className="text-xl font-bold text-gray-800 hidden sm:block">SoalGenius</h1>
                         </div>
                     </div>
-                     <div className="hidden md:flex items-center gap-4 ml-8">
+                    
+                    {/* Center Desktop Nav */}
+                    <div className="hidden md:flex items-center gap-4">
                         <button onClick={() => setView('archive')} className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md ${(view === 'archive' || view === 'editor' || view === 'preview') ? 'text-blue-700 bg-blue-100' : 'text-gray-600 hover:bg-gray-100'}`}>
                             <EditorIcon className="w-4 h-4" />
                             Editor Ujian
@@ -655,12 +670,30 @@ function App() {
                             Bank Soal
                         </button>
                     </div>
-                    <div className="hidden md:flex items-center gap-3">
-                         <input type="file" ref={uploadInputRef} className="hidden" accept=".json" onChange={(e) => e.target.files && handleRestoreData(e.target.files[0])} />
-                         <button onClick={handleTriggerUpload} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Pulihkan Data"><UploadIcon className="w-5 h-5"/></button>
-                         <button onClick={backupData} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Cadangkan Data"><DownloadIcon className="w-5 h-5"/></button>
-                         <button onClick={() => setView('settings')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Pengaturan"><SettingsIcon className="w-5 h-5"/></button>
-                         <button onClick={() => setInfoModalOpen(true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Tentang Aplikasi"><InfoIcon className="w-5 h-5"/></button>
+                    
+                    {/* Right Side */}
+                    <div className="flex items-center gap-3">
+                        {/* Desktop Actions */}
+                        <div className="hidden md:flex items-center gap-3">
+                             <input type="file" ref={uploadInputRef} className="hidden" accept=".json" onChange={(e) => e.target.files && handleRestoreData(e.target.files[0])} />
+                             <button onClick={handleTriggerUpload} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Pulihkan Data"><UploadIcon className="w-5 h-5"/></button>
+                             <button onClick={backupData} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Cadangkan Data"><DownloadIcon className="w-5 h-5"/></button>
+                             <button onClick={() => setView('settings')} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Pengaturan"><SettingsIcon className="w-5 h-5"/></button>
+                             <button onClick={() => setInfoModalOpen(true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" title="Tentang Aplikasi"><InfoIcon className="w-5 h-5"/></button>
+                        </div>
+                        {/* Mobile Actions Menu */}
+                        <div className="md:hidden relative" ref={actionsMenuRef}>
+                            <button onClick={() => setActionsMenuOpen(prev => !prev)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full" aria-label="Buka menu aksi">
+                                <MenuIcon className="w-5 h-5" />
+                            </button>
+                            {isActionsMenuOpen && (
+                                <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg z-20 border py-1">
+                                    <button onClick={() => { setView('settings'); setActionsMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><SettingsIcon className="w-5 h-5"/> Pengaturan</button>
+                                    <button onClick={() => { backupData(); setActionsMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><DownloadIcon className="w-5 h-5"/> Cadangkan Data</button>
+                                    <button onClick={() => { handleTriggerUpload(); setActionsMenuOpen(false); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><UploadIcon className="w-5 h-5"/> Pulihkan Data</button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </nav>
             </header>
@@ -677,18 +710,6 @@ function App() {
                     </button>
                 </nav>
                 <div className="my-4 h-px bg-gray-200"></div>
-                 <nav className="flex flex-col gap-2">
-                     <button onClick={() => {setView('settings'); setSidebarOpen(false);}} className="flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100">
-                        <SettingsIcon className="w-5 h-5"/> Pengaturan
-                     </button>
-                      <button onClick={() => {backupData(); setSidebarOpen(false);}} className="flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100">
-                        <DownloadIcon className="w-5 h-5"/> Cadangkan Data
-                      </button>
-                     <button onClick={() => {handleTriggerUpload(); setSidebarOpen(false);}} className="flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100">
-                        <UploadIcon className="w-5 h-5"/> Pulihkan Data
-                     </button>
-                </nav>
-                 <div className="my-4 h-px bg-gray-200"></div>
                  <nav>
                     <button onClick={() => {setInfoModalOpen(true); setSidebarOpen(false);}} className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-100">
                         <InfoIcon className="w-5 h-5"/> Tentang & Panduan
